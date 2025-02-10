@@ -6,7 +6,7 @@ function dispersion_relation(k, kₚ, g, n₀, δ, m, branch::Bool)
     v = ħ * kₚ / m
     pm = branch ? 1 : -1
     gn₀ = g * n₀
-    v * k + pm * √(ħ^2 * k^4 / 4m^2 + (ħ * (2 * g * n₀ - δ) / m) * k^2 + (gn₀ - δ) * (3gn₀ - δ))
+    v * k + pm * √((2gn₀ - δ + ħ * k^2 / 2m)^2 - (gn₀)^2)
 end
 
 function speed_of_sound(n, δ, g, ħ, m)

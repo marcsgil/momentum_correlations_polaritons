@@ -1,4 +1,4 @@
-using GeneralizedGrossPitaevskii, CairoMakie, FFTW, Statistics
+using GeneralizedGrossPitaevskii, CairoMakie, Statistics, FFTW
 include("polariton_funcs.jl")
 
 function dispersion(ks, param)
@@ -16,7 +16,13 @@ function A(t, Amax, t_cycle, t_freeze)
 end
 
 function pump(x, param, t)
-    (x[1] ≤ -7) * A(t, param.Amax, param.t_cycle, param.t_freeze) * (1 + 3 * (x[1] ≤ (-param.L / 2 + 10))) * cis(x[1] * param.k_pump)
+    a = A(t, param.Amax, param.t_cycle, param.t_freeze)
+    if x[1] ≤ -param.L * 0.9 / 2 || x[1] ≥ -10
+        a *= 0
+    elseif -param.L * 0.9 / 2 < x[1] ≤ -param.L * 0.85 / 2
+        a *= 6
+    end
+    a * cis(mapreduce(*, +, param.k_pump, x))
 end
 
 nonlinearity(ψ, param) = param.g * abs2(ψ)
@@ -31,21 +37,19 @@ rs = range(; start=-L / 2, step=L / N, length=N)
 
 # Polariton parameters
 ħ = 0.6582f0 #meV.ps
-ω₀ = 1473.36f0 / ħ
-ωₚ = 1473.85f0 / ħ
 γ = 0.047f0 / ħ
-m = ħ^2 / (2 * 1.29f0)
+m = ħ^2 / 2.5f0
 g = 0.0003f0 / ħ
+δ₀ = 0.49 / ħ
 
 # Potential parameters
-V_damp = 10.0f0
-w_damp = 0.1f0
+V_damp = 100.0f0
+w_damp = 5.0f0
 V_def = -0.85f0 / ħ
 w_def = 0.75f0
 
 # Pump parameters
-k_pump = 0.27f0
-δ₀ = ωₚ - ω₀
+k_pump = 0.25f0
 δ = δ₀ - ħ * k_pump^2 / 2m
 
 # Bistability cycle parameters
@@ -65,11 +69,11 @@ tspan = (0, 1000.0f0)
 δt =  1.0f-1
 solver = StrangSplittingB(2048, δt)
 ts, sol = solve(prob, solver, tspan)
-
+##
 with_theme(theme_latexfonts()) do
     fig = Figure(fontsize=20)
     ax = Axis(fig[1, 1]; xlabel="x", ylabel="t")
-    heatmap!(ax, rs, ts, Array(angle.(sol)))
+    heatmap!(ax, rs, ts, Array(abs2.(sol)))
     fig
 end
 ##
@@ -148,16 +152,16 @@ log_δψ̃ = δψ |> ifftshift |> fft |> fftshift .|> abs .|> log
 J = argmax(log_δψ̃)
 mi = minimum(log_δψ̃)
 log_δψ̃[J[1], :] .= mi
-log_δψ̃[:, J[2]:end] .= mi
+log_δψ̃[:, J[2]] .= mi
 
 with_theme(theme_latexfonts()) do
     fig = Figure(fontsize=20)
     ax = Axis(fig[1, 1]; xlabel=L"k", ylabel=L"\omega")
-    ω₊ = dispersion_relation.(ks, 0, g, 0, 0, m, true)
-    ω₋ = dispersion_relation.(ks, 0, g, 0, 0, m, false)
+    ω₊ = dispersion_relation.(ks, k_pump, g, 0, δ, m, true)
+    ω₋ = dispersion_relation.(ks, 0, g, 0, δ₀, m, false)
     heatmap!(ax, ks, -ωs, log_δψ̃, colormap=:magma)
-    lines!(ax, ks .- k_pump, ω₊ .- δ₀, color=:red, linestyle=:dot, linewidth=4)
-    lines!(ax, ks .- k_pump, ω₋ .- δ₀, color=:blue, linestyle=:dot, linewidth=4)
+    lines!(ax, ks, ω₊, color=:red, linestyle=:dot, linewidth=4)
+    lines!(ax, ks, ω₋, color=:blue, linestyle=:dot, linewidth=4)
     ylims!(ax, extrema(ωs))
     fig
 end

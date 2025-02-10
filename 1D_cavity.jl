@@ -74,7 +74,7 @@ solver_steady = StrangSplittingC(512, δt)
 ts_steady, sol_steady = solve(prob_steady, solver_steady, tspan_steady);
 
 steady_state = sol_steady[:, end]
-heatmap(rs, ts_steady, Array(angle.(sol_steady)))
+heatmap(rs, ts_steady, Array(abs2.(sol_steady)))
 ##
 with_theme(theme_latexfonts()) do
     fig = Figure(; fontsize=20)
@@ -239,7 +239,7 @@ function calculate_correlation(steady_state, lengths, batchsize, nbatches, tspan
     two_point /= nbatches * batchsize
 
     δ = one(two_point)
-    factor = 1 / 2param.δL
+    factor = 1 #/ 2param.δL
     n = one_point .- factor
 
     (two_point .- factor .* (1 .+ δ) .* (n .+ n' .+ factor)) ./ (n .* n')
@@ -255,10 +255,10 @@ ks = range(; start=-π / δL, step=2π / (N * δL), length=N)
 
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(730, 600), fontsize=20)
-    ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"x", ylabel=L"x\prime")
+    ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime")
     #hm = heatmap!(ax, rs[J], rs[J], (Array(real(G2)[J, J]) .- 1) * 1e5, colorrange=(-5, 5), colormap=:inferno)
-    hm = heatmap!(ax, ks[J] .- k_pump, ks[J].- k_pump, (Array(real(G2)[J, J]) .- 1) * 2e3, colorrange=(-5, 5), colormap=:inferno)
-    Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-5})")
+    hm = heatmap!(ax, ks[J] .- k_pump, ks[J].- k_pump, (Array(real(G2)[J, J]) .- 1) * 1e3, colorrange=(-3, 3), colormap=:inferno)
+    Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-3})")
     #lines!(ax, -corr_down, -corr_up, linewidth=4)
     #save("dev_env/g2m1.pdf", fig)
     fig
