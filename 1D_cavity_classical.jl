@@ -29,9 +29,9 @@ nonlinearity(ψ, param) = param.g * abs2(ψ)
 noise_func(ψ, param) = √(param.γ / 2 / param.δL)
 
 # Space parameters
-L = 3600.0f0
+L = 800.0f0
 lengths = (L,)
-N = 2048
+N = 1024
 δL = L / N
 rs = range(; start=-L / 2, step=L / N, length=N)
 
@@ -66,14 +66,18 @@ u0 = zeros(ComplexF32, ntuple(n -> N, length(lengths)))
 noise_prototype = similar(u0)
 prob = GrossPitaevskiiProblem(u0, lengths; dispersion, potential, nonlinearity, pump, param, noise_func)
 tspan = (0, 1000.0f0)
-δt =  1.0f-1
-solver = StrangSplittingB(2048, δt)
+δt = 1.0f-2
+solver = StrangSplittingB(1024, δt)
 ts, sol = solve(prob, solver, tspan)
+u0_steady = sol[:, end]
 ##
 with_theme(theme_latexfonts()) do
-    fig = Figure(fontsize=20)
+    fig = Figure(fontsize=20, size=(1200, 400))
     ax = Axis(fig[1, 1]; xlabel="x", ylabel="t")
+    ax2 = Axis(fig[1, 2]; xlabel="x")
     heatmap!(ax, rs, ts, Array(abs2.(sol)))
+    heatmap!(ax2, rs, ts, Array(angle.(sol)), colormap=:hsv)
+    hideydecorations!(ax2)
     fig
 end
 ##
@@ -96,12 +100,38 @@ with_theme(theme_latexfonts()) do
     fig
 end
 ##
-u0_steady = sol[:, end]
+v = velocity(u0_steady, ħ, m, δL)
 
+kps_sq = -real.(finite_difference_lap(u0_steady) ./ u0_steady) / δL^2
+
+with_theme(theme_latexfonts()) do
+    fig = Figure(fontsize=20)
+    ax = Axis(fig[1, 1]; xlabel="x")
+    offset = 200
+    J = N÷2-offset:N÷2+offset
+    lines!(ax, sqrt.(kps_sq[J]))
+    fig
+end
+##
+δ_vec = δ₀ .+ ħ * kps_sq / 2m
+
+c = [speed_of_sound(abs2(ψ), δ, g, ħ, m) for (ψ, δ) ∈ zip(Array(u0_steady[2:end-1]), Array(δ_vec))]
+
+with_theme(theme_latexfonts()) do
+    fig = Figure(; fontsize=20)
+    ax = Axis(fig[1, 1], xlabel=L"x")
+    offset = 200
+    J = N÷2-offset:N÷2+offset
+    lines!(ax, rs[J], c[J], linewidth=4, color=:blue, label=L"c")
+    lines!(ax, rs[J], Array(v[J]), linewidth=4, color=:red, label=L"v")
+    axislegend()
+    fig
+end
+##
 offset = 100
-J = N ÷ 4 - offset:N ÷ 4 + offset
+J = N÷4-offset:N÷4+offset
 
-δψ = (sol[J, 1800:end] ./ u0_steady[J]) .-1
+δψ = (sol[J, 800:end] ./ u0_steady[J]) .- 1
 heatmap(abs2.(δψ))
 ##
 Δt = ts[2] - ts[1]
@@ -132,12 +162,11 @@ with_theme(theme_latexfonts()) do
     fig
 end
 ##
-offset = 300
-J = 3N ÷ 4 - offset:3N ÷ 4 + offset
-δψ = (sol[J, 1800:end] ./ u0_steady[J]) .- 1
+offset = 100
+J = 550:700
+δψ = (sol[J, 800:end] ./ (u0_steady[J])) .- 1
 heatmap(abs2.(δψ))
 ##
-
 Δt = ts[2] - ts[1]
 Δx = rs[2] - rs[1]
 
@@ -154,14 +183,22 @@ mi = minimum(log_δψ̃)
 log_δψ̃[J[1], :] .= mi
 log_δψ̃[:, J[2]] .= mi
 
+k_down = sqrt(kps_sq[700])
+
 with_theme(theme_latexfonts()) do
     fig = Figure(fontsize=20)
     ax = Axis(fig[1, 1]; xlabel=L"k", ylabel=L"\omega")
-    ω₊ = dispersion_relation.(ks, k_pump, g, 0, δ, m, true)
-    ω₋ = dispersion_relation.(ks, 0, g, 0, δ₀, m, false)
+    ω₊ = dispersion_relation.(ks, k_down, g, 0, 0, m, true)
+    ω₋ = dispersion_relation.(ks, k_down, g, 0, 0, m, false)
     heatmap!(ax, ks, -ωs, log_δψ̃, colormap=:magma)
     lines!(ax, ks, ω₊, color=:red, linestyle=:dot, linewidth=4)
     lines!(ax, ks, ω₋, color=:blue, linestyle=:dot, linewidth=4)
     ylims!(ax, extrema(ωs))
     fig
 end
+##
+δ₀ - ħ * k_down^2 / 2m
+
+ħ * k_down^2 / 2m
+
+δ₀

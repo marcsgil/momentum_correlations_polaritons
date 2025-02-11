@@ -1,4 +1,4 @@
-using Revise, GeneralizedGrossPitaevskii, CairoMakie, LinearAlgebra, CUDA, CUDA.CUFFT, Statistics, ProgressMeter, KernelAbstractions
+using Revise, GeneralizedGrossPitaevskii, CairoMakie, LinearAlgebra, CUDA, CUDA.CUFFT, Statistics, ProgressMeter, KernelAbstractions, HDF5
 include("polariton_funcs.jl")
 
 function dispersion(ks, param)
@@ -9,7 +9,6 @@ function potential(rs, param)
     -param.V_def * exp(-sum(abs2, rs) / param.w_def^2) +
     param.V_damp * damping_potential(rs, -param.L / 2, param.L / 2, param.w_damp)
 end
-
 
 function A(t, Amax, t_cycle, t_freeze)
     _t = ifelse(t > t_freeze, t_freeze, t)
@@ -126,60 +125,6 @@ with_theme(theme_latexfonts()) do
     fig
 end
 ##
-using ForwardDiff, Roots
-
-function get_extrema(up_bracket, down_bracket, param_up, param_down)
-
-    f(k) = ForwardDiff.derivative(k -> dispersion_relation(k, param_up...), k)
-    k_min = find_zero(f, up_bracket, Bisection())
-
-    g(k) = ForwardDiff.derivative(k -> dispersion_relation(k, param_down...), k)
-    k_max = find_zero(g, down_bracket, Bisection())
-
-    k_min, dispersion_relation(k_min, param_up...), k_max, dispersion_relation(k_max, param_down...)
-end
-
-up_bracket = -1, 1
-down_bracket = 0, 0.63
-
-ks_up = LinRange(up_bracket..., 512)
-ks_down = LinRange(down_bracket..., 512)
-
-n₀ = abs2(Array(steady_state)[N÷4])
-
-param_up = (k_pump, g, n₀, δ, m, false)
-ω₊_up = dispersion_relation.(ks_up, param_up...)
-
-param_down = (0, g, 0, δ₀, m, false)
-ω₊_down = dispersion_relation.(ks_down, param_down...)
-ω₋_down = dispersion_relation.(ks_down, 0, g, 0, δ₀, m, false)
-
-with_theme(theme_latexfonts()) do
-    fig = Figure(fontsize=20, size=(800, 400))
-    ax1 = Axis(fig[1, 1]; xlabel=L"k", ylabel=L"\omega")
-    ax2 = Axis(fig[1, 2]; xlabel=L"k")
-
-    ylims!(ax1, -0.9, 0.9)
-    ylims!(ax2, -0.9, 0.9)
-
-    lines!(ax1, ks_up, ω₊_up, linewidth=4)
-    lines!(ax2, ks_down, ω₊_down, linewidth=4)
-    lines!(ax2, ks_down, ω₋_down, linewidth=4)
-    fig
-end
-##
-k_min, ω_min, k_max, ω_max = get_extrema(up_bracket, down_bracket, param_up, param_down)
-
-ωs = LinRange(ω_min, ω_max, 512)
-
-half_up_bracket = (up_bracket[1], k_min)
-half_down_bracket = (down_bracket[1], k_max)
-
-corr_up = [find_zero(k -> dispersion_relation(k, param_up...) - ω, half_up_bracket, Bisection()) for ω ∈ ωs]
-corr_down = [find_zero(k -> dispersion_relation(k, param_down...) - ω, half_down_bracket, Bisection()) for ω ∈ ωs]
-
-lines(corr_up, corr_down, linewidth=4)
-##
 function one_point_corr!(dest, sol)
     backend = get_backend(dest)
 
@@ -219,11 +164,15 @@ function calculate_correlation(steady_state, lengths, batchsize, nbatches, tspan
     prob = GrossPitaevskiiProblem(u0_steady, lengths; noise_prototype, param, kwargs...)
     solver = StrangSplittingC(1, δt)
 
-    one_point = similar(steady_state, real(eltype(steady_state)))
-    two_point = similar(steady_state, real(eltype(steady_state)), size(steady_state, 1), size(steady_state, 1))
+    one_point_r = similar(steady_state, real(eltype(steady_state)))
+    two_point_r = similar(steady_state, real(eltype(steady_state)), size(steady_state, 1), size(steady_state, 1))
 
-    fill!(one_point, 0)
-    fill!(two_point, 0)
+    one_point_k = similar(steady_state, real(eltype(steady_state)))
+    two_point_k = similar(steady_state, real(eltype(steady_state)), size(steady_state, 1), size(steady_state, 1))
+
+    for array in (one_point_r, two_point_r, one_point_k, two_point_k)
+        fill!(array, zero(eltype(array)))
+    end
 
     for batch ∈ 1:nbatches
         @info "Batch $batch"
@@ -231,23 +180,44 @@ function calculate_correlation(steady_state, lengths, batchsize, nbatches, tspan
         sol = dropdims(_sol, dims=3)
         ft_sol = fftshift(fft(ifftshift(sol, 1), 1), 1)
 
-        one_point_corr!(one_point, ft_sol)
-        two_point_corr!(two_point, ft_sol)
+        one_point_corr!(one_point_r, sol)
+        two_point_corr!(two_point_r, sol)
+        one_point_corr!(one_point_k, ft_sol)
+        two_point_corr!(two_point_k, ft_sol)
     end
 
-    one_point /= nbatches * batchsize
-    two_point /= nbatches * batchsize
+    for array in (one_point_r, two_point_r, one_point_k, two_point_k)
+        array ./= nbatches * batchsize
+    end
 
-    δ = one(two_point)
-    factor = 1 #/ 2param.δL
-    n = one_point .- factor
+    #Real space
+    δ = one(two_point_r)
+    factor = 1 / 2param.δL
+    n = one_point_r .- factor
 
-    (two_point .- factor .* (1 .+ δ) .* (n .+ n' .+ factor)) ./ (n .* n')
+    G2_r = (two_point_r .- factor .* (1 .+ δ) .* (n .+ n' .+ factor)) ./ (n .* n')
+
+    h5open("g2_momentum.h5", "cw") do file
+        file["G2_r"] = Array(G2_r)
+    end
+
+    #Momentum space
+    δ = one(two_point_k)
+    factor = 1
+    n = one_point_k .- factor
+
+    G2_k = (two_point_k .- factor .* (1 .+ δ) .* (n .+ n' .+ factor)) ./ (n .* n')
+
+    h5open("g2_momentum.h5", "cw") do file
+        file["G2_k"] = Array(G2_k)
+    end
+
+    G2_r, G2_k
 end
 
 tspan_noise = (0.0f0, 50.0f0) .+ tspan_steady[end]
 
-G2 = calculate_correlation(steady_state, lengths, 10^5, 1, tspan_noise, δt;
+G2_r, G2_k = calculate_correlation(steady_state, lengths, 10^5, 100, tspan_noise, δt;
     dispersion, potential, nonlinearity, pump, param, noise_func)
 ##
 J = N÷2-130:N÷2+130
@@ -257,9 +227,9 @@ with_theme(theme_latexfonts()) do
     fig = Figure(; size=(730, 600), fontsize=20)
     ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime")
     #hm = heatmap!(ax, rs[J], rs[J], (Array(real(G2)[J, J]) .- 1) * 1e5, colorrange=(-5, 5), colormap=:inferno)
-    hm = heatmap!(ax, ks[J] .- k_pump, ks[J].- k_pump, (Array(real(G2)[J, J]) .- 1) * 1e3, colorrange=(-3, 3), colormap=:inferno)
+    hm = heatmap!(ax, ks[J] .- k_pump, ks[J].- k_pump, (Array(real(G2_k)[J, J]) .- 1) * 1e3, colorrange=(-3, 3), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-3})")
-    #lines!(ax, -corr_down, -corr_up, linewidth=4)
+    #lines!(ax, corr_up, corr_down, linewidth=4)
     #save("dev_env/g2m1.pdf", fig)
     fig
 end
