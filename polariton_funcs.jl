@@ -1,28 +1,31 @@
-using LinearAlgebra
+using LinearAlgebra, Roots
 
-function eq_of_state(n, δ, g, γ)        
+detuning(δ₀, K, ħ, m) = δ₀ - ħ * K^2 / 2m
+
+function eq_of_state(n, g, δ₀, K, ħ, m, γ)
+    δ = detuning(δ₀, K, ħ, m)
     n * (γ^2 / 4 + (g * n - δ)^2)
 end
 
-function dispersion_relation(k, kₚ, g, n₀, δ, m, branch::Bool)
-    v = ħ * kₚ / m
-    pm = branch ? 1 : -1
-    gn₀ = g * n₀
-    v * k + pm * √((2gn₀ - δ + ħ * k^2 / 2m)^2 - (gn₀)^2)
+function dispersion_relation(k, n, g, δ₀, K, ħ, m, branch::Bool)
+    gn = g * n
+    v = ħ * K / m
+    δ = detuning(δ₀, K, ħ, m)
+    v * k + (2branch - 1) * √((2gn - δ + ħ * k^2 / 2m)^2 - (gn)^2)
 end
 
-function speed_of_sound(n, δ, g, ħ, m)
-    2g * n ≥ δ ? √(ħ * (2g * n - δ) / m) : NaN
+function speed_of_sound(n, g, δ₀, K, ħ, m)
+    δ = detuning(δ₀, K, ħ, m)
+    gn = g * n
+    2gn ≥ δ ? √(ħ * (2gn - δ) / m) : NaN
 end
 
 function velocity(steady_state, ħ, m, δL)
-    ϕ₊ = @view steady_state[2:end]
-    ϕ₋ = @view steady_state[1:end-1]
-    @. ħ * imag(log(ϕ₊ / ϕ₋)) / m / δL
+    ħ * mod2pi.(finite_difference_grad(angle.(steady_state))) / m / δL
 end
 
 function finite_difference_grad(N::Integer)
-    Tridiagonal(ones(N-1), -ones(N), zeros(N-1))
+    Tridiagonal(-ones(N - 1), ones(N), zeros(N - 1))
 end
 
 function finite_difference_grad(ψ)
@@ -30,7 +33,7 @@ function finite_difference_grad(ψ)
 end
 
 function finite_difference_lap(N::Integer)
-    Tridiagonal(ones(N-1), -2ones(N), ones(N-1))
+    Tridiagonal(ones(N - 1), -2ones(N), ones(N - 1))
 end
 
 function finite_difference_lap(ψ)
