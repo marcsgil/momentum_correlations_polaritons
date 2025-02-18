@@ -85,6 +85,35 @@ bracket1 = (-0.8, k_ext1)
 bracket2 = (0.01, 1)
 
 corr_up_u1d1, corr_down_u1d1 = correlate(param1, bracket1, param2, bracket2, 128, false)
+## (d1, d2)
+param1 = (param_down..., true)
+param2 = (param_down..., false)
+
+k_ext1, ω_ext1 = find_extrema(dispersion_relation, (-1, -0.1), param1...)
+k_ext2, ω_ext2 = find_extrema(dispersion_relation, (0.1, 1), param2...)
+
+k1_max = find_zero(k -> dispersion_relation(k, param1...) - ω_ext2, (0.1, 1))
+k2_min = find_zero(k -> dispersion_relation(k, param2...) - ω_ext1, (-1, -0.1))
+
+bracket1 = (k_ext1, k1_max)
+bracket2 = (k2_min, k_ext2)
+
+corr_d1d2, corr_d1d2′ = correlate(param1, bracket1, param2, bracket2, 128, false)
+## (d1, d2_star)
+##
+param1 = (param_down..., true)
+param2 = (param_down..., false)
+
+k_ext1, ω_ext1 = find_extrema(dispersion_relation, (-1, -0.1), param1...)
+k_ext2, ω_ext2 = find_extrema(dispersion_relation, (0.1, 1), param2...)
+
+k1_max = find_zero(k -> dispersion_relation(k, param1...) - ω_ext2, (0.1, 1))
+k2_min = find_zero(k -> dispersion_relation(k, param2...) - ω_ext1, (-1, -0.1))
+
+bracket1 = (k_ext1, k1_max)
+bracket2 = (k2_min, k_ext2)
+
+corr_d1d2_star, corr_d1d2_star′ = correlate(param1, bracket1, param2, bracket2, 128, true)
 ##
 ks = range(; start=-π / param.δL, step=2π / (size(G2_k, 1) * param.δL), length=size(G2_k, 1))
 J = (N÷2-230:N÷2+230) .+ 90
@@ -93,7 +122,7 @@ power = 3
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(850, 600), fontsize=20)
     ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime")
-    hm = heatmap!(ax, ks[:], ks[:], (G2_k[:, :] .- 1) * 10^3, colorrange=(-1, 1), colormap=:inferno)
+    hm = heatmap!(ax, ks[J], ks[J], (G2_k[J, J] .- 1) * 10^3, colorrange=(-1, 1), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$power})")
     for line_func! in (hlines!, vlines!)
         line_func!(ax, k_up, color=:green, linestyle=:dash)
@@ -101,6 +130,8 @@ with_theme(theme_latexfonts()) do
     end
     lines!(ax, corr_down_u1d2 .+ k_down, corr_up_u1d2 .+ k_up, linewidth=4, color=:blue, linestyle=:dash, label="u1d2")
     lines!(ax, corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=:red, linestyle=:dash, label="u1d1")
+    lines!(ax, corr_d1d2 .+ k_down, corr_d1d2′ .+ k_down, linewidth=4, color=:purple, linestyle=:dash, label="d1d2")
+    lines!(ax, corr_d1d2_star .+ k_down, corr_d1d2_star′ .+ k_down, linewidth=4, color=:orange, linestyle=:dash, label="d1d2*")
     Legend(fig[1, 3], ax)
     fig
 end
