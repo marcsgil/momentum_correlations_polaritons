@@ -213,7 +213,7 @@ end
 ##
 tspan_noise = (0.0f0, 50.0f0) .+ tspan[end]
 saving_path = "correlation.h5"
-group_name = "no_support_cut"
+group_name = "no_support_long"
 
-calculate_correlation(steady_state, lengths, 10^5, 1, tspan_noise, δt, saving_path, group_name;
+calculate_correlation(steady_state, lengths, 10^5, 6000, tspan_noise, δt, saving_path, group_name;
     dispersion, potential, nonlinearity, pump, param, noise_func, show_progress=false)

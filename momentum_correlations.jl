@@ -4,7 +4,7 @@ include("io.jl")
 include("polariton_funcs.jl")
 
 G2_r, G2_k, param, steady_state = h5open("correlation.h5", "r") do file
-    group = file["no_support"]
+    group = file["no_support_long"]
     read(group, "G2_r"), read(group, "G2_k"), read_parameters(group), read(group, "steady_state")
 end
 
@@ -93,7 +93,7 @@ power = 3
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(850, 600), fontsize=20)
     ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime")
-    hm = heatmap!(ax, ks[J], ks[J], (G2_k[J, J] .- 1) * 10^3, colorrange=(-1, 1), colormap=:inferno)
+    hm = heatmap!(ax, ks[:], ks[:], (G2_k[:, :] .- 1) * 10^3, colorrange=(-1, 1), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$power})")
     for line_func! in (hlines!, vlines!)
         line_func!(ax, k_up, color=:green, linestyle=:dash)
