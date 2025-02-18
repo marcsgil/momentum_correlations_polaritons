@@ -4,7 +4,7 @@ include("io.jl")
 include("polariton_funcs.jl")
 
 G2_r, G2_k, param, steady_state = h5open("correlation.h5", "r") do file
-    group = file["no_support_long"]
+    group = file["no_support"]
     read(group, "G2_r"), read(group, "G2_k"), read_parameters(group), read(group, "steady_state")
 end
 
