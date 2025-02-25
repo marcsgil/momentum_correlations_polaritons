@@ -12,7 +12,6 @@ function correlate(param1, bracket1, param2, bracket2, N, invert_ω::Bool=false)
 
     for n ∈ eachindex(ks2)
         ω1 = dispersion_relation(ks1[n], param1...)
-        @show ω1
         ks2[n] = find_zero(k′ -> dispersion_relation(k′, param2...) + (2invert_ω - 1) * ω1, bracket2)
     end
 
