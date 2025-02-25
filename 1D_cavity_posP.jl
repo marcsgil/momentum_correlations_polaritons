@@ -75,29 +75,12 @@ t_freeze = 288.0f0
 param = (; δ₀, m, γ, ħ, L, g, V_damp, w_damp, V_def, w_def,
     Amax, t_cycle, t_freeze, δL, k_pump)
 
-u0_empty = CUDA.fill(SVector{2,ComplexF32}(0, 0), N, 100)
+u0_empty = CUDA.fill(SVector{2,ComplexF32}(0, 0), N)
 prob_steady = GrossPitaevskiiProblem(u0_empty, lengths; dispersion, potential, nonlinearity, pump, param)
 tspan_steady = (0, 800.0f0)
 solver_steady = StrangSplittingB(512, δt)
-ts_steady, sol_steady = solve(prob_steady, solver_steady, tspan_steady);
-##
+ts_steady, sol_steady = GeneralizedGrossPitaevskii.solve(prob_steady, solver_steady, tspan_steady);
 
-y = CUDA.randn(ComplexF32, 2, 1024, 10^5)
-x = similar(y)
-
-plan = plan_fft(x, 1)
-
-@benchmark mul!($y, $plan, $x)
-
-perm = (2, 3, 1)
-
-z = permutedims(y, perm)
-
-@benchmark permutedims!($z, $y, $perm)
-
-permutedims!
-
-##
 steady_state = sol_steady[:, end]
 heatmap(rs, ts_steady, Array(abs2.(first.(sol_steady))))
 ##
@@ -188,8 +171,8 @@ function calculate_correlation(steady_state, lengths, batchsize, nbatches, tspan
     #u0_steady = CUDA.randn(eltype(steady_state), length(steady_state), batchsize) ./ 2param.δL .+ steady_state
     noise_prototype = similar(u0_steady, real(eltype(u0_steady)))
 
-    prob = GrossPitaevskiiProblem(u0_steady, lengths; param, kwargs...)
-    solver = StrangSplittingB(1, δt)
+    prob = GrossPitaevskiiProblem(u0_steady, lengths; param, kwargs..., noise_prototype)
+    solver = StrangSplittingC(1, δt)
 
     one_point = similar(steady_state, real(eltype(eltype(steady_state))))
     two_point = similar(steady_state, real(eltype(eltype(steady_state))), size(steady_state, 1), size(steady_state, 1))
@@ -199,7 +182,7 @@ function calculate_correlation(steady_state, lengths, batchsize, nbatches, tspan
 
     for batch ∈ 1:nbatches
         @info "Batch $batch"
-        ts, _sol = solve(prob, solver, tspan; save_start=false)
+        ts, _sol = GeneralizedGrossPitaevskii.solve(prob, solver, tspan; save_start=false)
         sol = dropdims(_sol, dims=3)
 
         one_point_corr!(one_point, sol)
@@ -214,7 +197,7 @@ end
 
 tspan_noise = (0.0f0, 50.0f0) .+ tspan_steady[end]
 
-G2 = calculate_correlation(steady_state, lengths, 10^4, 1, tspan_noise, δt;
+G2 = calculate_correlation(steady_state, lengths, 10^5, 1, tspan_noise, δt;
     dispersion, potential, nonlinearity, pump, param, noise_func)
 ##
 J = N÷2-260:N÷2+260

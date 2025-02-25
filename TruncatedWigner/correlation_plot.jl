@@ -1,12 +1,26 @@
 using CairoMakie, HDF5, FFTW
-include("tracing.jl")
-include("io.jl")
-include("polariton_funcs.jl")
+include("../tracing.jl")
+include("../io.jl")
+include("../polariton_funcs.jl")
+include("equations.jl")
 
-G2_r, G2_k, param, steady_state = h5open("test.h5", "r") do file
-    group = file["test"]
-    read(group, "G2_r"), read(group, "G2_k"), read_parameters(group), read(group, "steady_state")
+saving_path = "TruncatedWigner/test.h5"
+group_name = "TruncatedWigner/test"
+
+param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k = h5open(saving_path) do file
+    group = file[group_name]
+
+    read_parameters(group),
+    group["steady_state"] |> read,
+    group["t_steady_state"] |> read,
+    group["one_point_r"] |> read,
+    group["two_point_r"] |> read,
+    group["one_point_k"] |> read,
+    group["two_point_k"] |> read
 end
+
+g2_r = calculate_g2(one_point_r, two_point_r, 1 / 2param.δL)
+g2_k = calculate_g2(one_point_k, two_point_k, 1 / 2)
 
 N = param.N
 L = param.L
@@ -27,7 +41,7 @@ power = 5
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(730, 600), fontsize=20)
     ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"x", ylabel=L"x\prime")
-    hm = heatmap!(ax, rs[J], rs[J], (Array(real(G2_r)[J, J]) .- 1) * 10^power, colorrange=(-5, 5), colormap=:inferno)
+    hm = heatmap!(ax, rs[J], rs[J], (Array(real(g2_r)[J, J]) .- 1) * 10^power, colorrange=(-5, 5), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$power})")
     fig
 end
@@ -183,14 +197,14 @@ bracket2 = (k2_min, k_ext2)
 
 corr_d2d2_star, corr_d2d2_star′ = correlate(param1, bracket1, param2, bracket2, 128, true)
 ##
-ks = range(; start=-π / param.δL, step=2π / (size(G2_k, 1) * param.δL), length=size(G2_k, 1))
+ks = range(; start=-π / param.δL, step=2π / (size(g2_k, 1) * param.δL), length=size(g2_k, 1))
 J = (N÷2-230:N÷2+230) .+ 90
 power = 3
 
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(900, 600), fontsize=20)
     ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime")
-    hm = heatmap!(ax, ks[J], ks[J], (G2_k[J, J] .- 1) * 10^3, colorrange=(-1, 1), colormap=:inferno)
+    hm = heatmap!(ax, ks[J], ks[J], (g2_k[J, J] .- 1) * 10^3, colorrange=(-1, 1), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$power})")
     for line_func! in (hlines!, vlines!)
         line_func!(ax, k_up, color=:green, linestyle=:dash)
