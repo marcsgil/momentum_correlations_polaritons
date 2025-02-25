@@ -39,22 +39,6 @@ end
 
 noise_func(ψ, param) = √(param.γ / 2 / param.δL)
 
-function one_point_corr!(dest, sol)
-    backend = get_backend(dest)
-
-    @kernel function kernel!(dest, sol)
-        j = @index(Global)
-        x = zero(eltype(dest))
-        for k ∈ axes(sol, 2)
-            x += abs2(sol[j, k])
-        end
-        dest[j] += x
-    end
-
-    kernel!(backend, 64)(dest, sol, ndrange=length(dest))
-    KernelAbstractions.synchronize(backend)
-end
-
 function two_point_corr!(dest, sol)
     backend = get_backend(dest)
 
@@ -64,20 +48,14 @@ function two_point_corr!(dest, sol)
         for m ∈ axes(sol, 2)
             x += abs2(sol[j, m]) * abs2(sol[k, m])
         end
-        dest[j, k] += x
+        dest[j, k] = x
     end
 
     kernel!(backend, 64)(dest, sol, ndrange=size(dest))
     KernelAbstractions.synchronize(backend)
 end
 
-function get_correlation_buffers(steady_state)
-    one_point = real(zero(steady_state))
-    two_point = one_point * one_point'
-    one_point, two_point
-end
-
-function calculate_correlation(steady_state, lengths, batchsize, nbatches, tspan, δt, saving_path, group_name; param, show_progress=true, kwargs...)
+function update_correlation!(two_point_r, two_point_k, N, steady_state, lengths, batchsize, nbatches, tspan, δt, saving_path, group_name; param, show_progress=true, kwargs...)
     file = h5open(saving_path, "cw")
     group = create_group(file, group_name)
     write_parameters!(group, param)
@@ -89,8 +67,7 @@ function calculate_correlation(steady_state, lengths, batchsize, nbatches, tspan
     prob = GrossPitaevskiiProblem(u0, lengths; noise_prototype, param, kwargs...)
     solver = StrangSplittingC(1, δt)
 
-    one_point_r, two_point_r = get_correlation_buffers(steady_state)
-    one_point_k, two_point_k = get_correlation_buffers(steady_state)
+    buffer = similar(steady_state, length(steady_state), length(steady_state))
 
     for batch ∈ 1:nbatches
         @info "Batch $batch"
@@ -98,15 +75,17 @@ function calculate_correlation(steady_state, lengths, batchsize, nbatches, tspan
         sol = dropdims(_sol, dims=3)
         ft_sol = fftshift(fft(ifftshift(sol, 1), 1), 1)
 
-        one_point_corr!(one_point_r, sol)
-        two_point_corr!(two_point_r, sol)
-        one_point_corr!(one_point_k, ft_sol)
-        two_point_corr!(two_point_k, ft_sol)
+        two_point_corr!(buffer, sol)
+        @. two_point_r = inv(1 + batchsize / N) * two_point_r + inv(1 + N / batchsize) * buffer
+
+        two_point_corr!(buffer, ft_sol)
+        @. two_point_k = inv(1 + batchsize / N) * two_point_k + inv(1 + N / batchsize) * buffer
+
+        N += batchsize
     end
 
-    for array in (one_point_r, two_point_r, one_point_k, two_point_k)
-        array ./= nbatches * batchsize
-    end
+    one_point_r = abs2.(steady_state)
+    one_point_k = abs2.(fftshift(fft(ifftshift(steady_state, 1), 1), 1))
 
     for (one_point, two_point, factor, type) ∈ ((one_point_r, two_point_r, 1 / 2param.δL, "r"), (one_point_k, two_point_k, 1, "k"))
         δ = one(two_point)
