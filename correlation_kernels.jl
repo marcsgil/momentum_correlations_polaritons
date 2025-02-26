@@ -1,4 +1,4 @@
-using KernelAbstractions, CUDA.CUFFT
+using KernelAbstractions, CUDA.CUFFT, Logging, Dates
 
 function one_point_corr!(dest, sol::AbstractArray{T}) where {T<:Number}
     backend = get_backend(dest)
@@ -73,13 +73,17 @@ function get_ft_sol(sol::AbstractArray{T}) where {T<:Number}
 end
 
 function get_ft_sol(sol)
-    rsol = reinterpret(reshape, eltype(eltype(sol)), sol)
-    rft_sol = fftshift(fft(ifftshift(rsol, 2), 2), 2)
-    reinterpret(eltype(sol), rft_sol)
+    αs = first.(sol)
+    βs = last.(sol)
+
+    ft_αs = fftshift(fft(ifftshift(αs, 1), 1), 1)
+    ft_βs = fftshift(ifft(ifftshift(βs, 1), 1), 1)
+
+    map((α, β) -> SVector(α, β), ft_αs, ft_βs)
 end
 
 function update_correlations!(one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, lengths, batchsize, nbatches, tspan, δt;
-    show_progress=true, noise_eltype=eltype(steady_state), kwargs...)
+    show_progress=true, noise_eltype=eltype(steady_state), log_path="log.txt", max_datetime=typemax(DateTime), kwargs...)
     u0 = stack(steady_state for _ ∈ 1:batchsize)
     noise_prototype = similar(u0, noise_eltype)
 
@@ -89,8 +93,16 @@ function update_correlations!(one_point_r, two_point_r, one_point_k, two_point_k
     buffer_one_point = similar(one_point_r)
     buffer_two_point = similar(two_point_r)
 
+    io = open(log_path, "w+")
+    logger = SimpleLogger(io)
+
     for batch ∈ 1:nbatches
-        @info "Batch $batch"
+        now() > max_datetime && break
+        with_logger(logger) do
+            @info "Batch $batch"
+        end
+        flush(io)
+
         ts, _sol = GeneralizedGrossPitaevskii.solve(prob, solver, tspan; save_start=false, show_progress)
         sol = dropdims(_sol, dims=3)
         one_point_corr!(buffer_one_point, sol)
@@ -106,6 +118,8 @@ function update_correlations!(one_point_r, two_point_r, one_point_k, two_point_k
 
         n_ave += batchsize
     end
+
+    close(io)
 
     one_point_r, two_point_r, one_point_k, two_point_k, n_ave
 end

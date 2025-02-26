@@ -19,12 +19,20 @@ end
 
 function pump(x, param, t)
     a = A(t, param.Amax, param.t_cycle, param.t_freeze)
-    if x[1] ≤ -param.L * 0.9 / 2 || x[1] ≥ -10
+
+    if abs(x[1]) ≥ param.L * 0.85 / 2
         a *= 0
-    elseif -param.L * 0.9 / 2 < x[1] ≤ -param.L * 0.85 / 2
+    elseif -param.L * 0.80 / 2 ≥ x[1] > -param.L * 0.85 / 2
         a *= 6
     end
-    val = a * cis(mapreduce(*, +, param.k_up, x))
+
+    if x[1] > param.divide
+        a *= param.factor
+    end
+
+    k = x[1] < param.divide ? param.k_up : param.k_down
+
+    val = a * cis(mapreduce(*, +, k, x))
     SVector(val, conj(val))
 end
 

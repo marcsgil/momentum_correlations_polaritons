@@ -4,8 +4,8 @@ include("../io.jl")
 include("../polariton_funcs.jl")
 include("equations.jl")
 
-saving_path = "TruncatedWigner/test.h5"
-group_name = "TruncatedWigner/test"
+saving_path = "TruncatedWigner/correlations.h5"
+group_name = "no_support"
 
 param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k = h5open(saving_path) do file
     group = file[group_name]
@@ -41,7 +41,9 @@ power = 5
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(730, 600), fontsize=20)
     ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"x", ylabel=L"x\prime")
-    hm = heatmap!(ax, rs[J], rs[J], (Array(real(g2_r)[J, J]) .- 1) * 10^power, colorrange=(-5, 5), colormap=:inferno)
+    xlims!(ax, (-100, 100))
+    ylims!(ax, (-100, 100))
+    hm = heatmap!(ax, rs, rs, (g2_r .- 1) * 10^power, colorrange=(-5, 5), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$power})")
     fig
 end
@@ -198,13 +200,14 @@ bracket2 = (k2_min, k_ext2)
 corr_d2d2_star, corr_d2d2_star′ = correlate(param1, bracket1, param2, bracket2, 128, true)
 ##
 ks = range(; start=-π / param.δL, step=2π / (size(g2_k, 1) * param.δL), length=size(g2_k, 1))
-J = (N÷2-230:N÷2+230) .+ 90
 power = 3
 
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(900, 600), fontsize=20)
     ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime")
-    hm = heatmap!(ax, ks[J], ks[J], (g2_k[J, J] .- 1) * 10^3, colorrange=(-1, 1), colormap=:inferno)
+    hm = heatmap!(ax, ks, ks, (g2_k .- 1) * 10^3, colorrange=(-1, 1), colormap=:inferno)
+    xlims!(ax, (-0.6, 1.3))
+    ylims!(ax, (-0.6, 1.3))
     Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$power})")
     for line_func! in (hlines!, vlines!)
         line_func!(ax, k_up, color=:green, linestyle=:dash)
@@ -212,6 +215,8 @@ with_theme(theme_latexfonts()) do
     end
     lines!(ax, corr_down_u1d2 .+ k_down, corr_up_u1d2 .+ k_up, linewidth=4, color=:blue, linestyle=:dash, label=L"u1_{\text{out}} \leftrightarrow d2_{\text{out}}")
     lines!(ax, corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=:red, linestyle=:dash, label=L"u1_{\text{out}} \leftrightarrow d1_{\text{out}}")
+    #lines!(ax, -corr_down_u1d2 .+ k_down, -corr_up_u1d2 .+ k_up, linewidth=4, color=:blue, linestyle=:dash, label=L"u1_{\text{out}} \leftrightarrow d2_{\text{out}}")
+    #lines!(ax, -corr_down_u1d1 .+ k_down, -corr_up_u1d1 .+ k_up, linewidth=4, color=:red, linestyle=:dash, label=L"u1_{\text{out}} \leftrightarrow d1_{\text{out}}")
     lines!(ax, corr_d1d2 .+ k_down, corr_d1d2′ .+ k_down, linewidth=4, color=:green, linestyle=:dash, label=L"d1_{\text{out}} \leftrightarrow d2_{\text{out}}")
     lines!(ax, corr_d1_star_d2_star′ .+ k_down, corr_d1_star_d2_star .+ k_down, linewidth=4, color=:purple, linestyle=:dash, label=L"d1_{\text{out}}^* \leftrightarrow d2_{\text{out}}^*")
     lines!(ax, corr_d2d2_star .+ k_down, corr_d2d2_star′ .+ k_down, linewidth=4, color=:orange, linestyle=:dash, label=L"d2_{\text{out}} \leftrightarrow d2_{\text{out}}^*")

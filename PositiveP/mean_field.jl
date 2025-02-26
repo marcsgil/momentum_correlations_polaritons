@@ -44,11 +44,11 @@ param = (; δ₀, m, γ, ħ, L, g, V_damp, w_damp, V_def, w_def,
 
 u0 = CUDA.fill(SVector{2,ComplexF32}(0, 0), N)
 prob = GrossPitaevskiiProblem(u0, lengths; dispersion, potential, nonlinearity, pump, param)
-tspan = (0, 800.0f0)
+tspan = (0, 1200.0f0)
 solver = StrangSplittingC(512, δt)
 ts, sol = GeneralizedGrossPitaevskii.solve(prob, solver, tspan);
 
-heatmap(rs, ts, Array(abs2.(first.(sol))))
+heatmap(rs, ts, Array(real(prod.(sol))))
 ##
 steady_state = sol[:, end]
 n = Array(real.(prod.(steady_state)))
@@ -107,8 +107,8 @@ one_point_k, two_point_k = get_correlation_buffers(steady_state)
 
 n_ave = 0
 
-saving_path = "PositiveP/test.h5"
-group_name = "PositiveP/test"
+saving_path = "PositiveP/correlations.h5"
+group_name = "no_support"
 
 h5open(saving_path, "cw") do file
     group = create_group(file, group_name)

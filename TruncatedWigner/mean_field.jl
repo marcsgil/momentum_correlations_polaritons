@@ -49,6 +49,8 @@ solver = StrangSplittingC(512, δt)
 ts, sol = GeneralizedGrossPitaevskii.solve(prob, solver, tspan);
 heatmap(rs, ts, Array(abs2.(sol)))
 ##
+lines(Array(abs2.(get_ft_sol(sol[:, end]))))
+##
 steady_state = sol[:, end]
 n = Array(abs2.(steady_state))
 n_up = n[N÷4]
@@ -106,8 +108,8 @@ one_point_k, two_point_k = get_correlation_buffers(steady_state)
 
 n_ave = 0
 
-saving_path = "TruncatedWigner/test.h5"
-group_name = "TruncatedWigner/test"
+saving_path = "TruncatedWigner/correlations.h5"
+group_name = "no_support"
 
 h5open(saving_path, "cw") do file
     group = create_group(file, group_name)

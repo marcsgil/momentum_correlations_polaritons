@@ -22,12 +22,13 @@ k_down = √(2m * δ₀ / ħ)
 
 n_up = abs2(Array(steady_state)[N÷4])
 
-J = N÷2-100:N÷2+100
 power = 5
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(730, 600), fontsize=20)
     ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"x", ylabel=L"x\prime")
-    hm = heatmap!(ax, rs[J], rs[J], (Array(real(G2_r)[J, J]) .- 1) * 10^power, colorrange=(-5, 5), colormap=:inferno)
+    xlims!(ax, (-150, 150))
+    ylims!(ax, (-150, 150))
+    hm = heatmap!(ax, rs, rs, (Array(real(G2_r)) .- 1) * 10^power, colorrange=(-5, 5), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$power})")
     fig
 end
