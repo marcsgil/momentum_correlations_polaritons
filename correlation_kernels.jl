@@ -69,15 +69,15 @@ function merge_averages!(dest, n_dest, new, n_new)
 end
 
 function get_ft_sol(sol::AbstractArray{T}) where {T<:Number}
-    fftshift(fft(ifftshift(sol, 1), 1), 1)
+    ifftshift(fft(fftshift(sol, 1), 1), 1)
 end
 
 function get_ft_sol(sol)
     αs = first.(sol)
     βs = last.(sol)
 
-    ft_αs = fftshift(fft(ifftshift(αs, 1), 1), 1)
-    ft_βs = fftshift(ifft(ifftshift(βs, 1), 1), 1)
+    ft_αs = ifftshift(fft(fftshift(αs, 1), 1), 1)
+    ft_βs = ifftshift(ifft(fftshift(βs, 1), 1), 1)
 
     map((α, β) -> SVector(α, β), ft_αs, ft_βs)
 end
@@ -96,6 +96,12 @@ function update_correlations!(one_point_r, two_point_r, one_point_k, two_point_k
     io = open(log_path, "w+")
     logger = SimpleLogger(io)
 
+    rs = range(; start=-param.L / 2, step=param.δL, length=length(one_point_r))
+    window = map(rs) do x
+        exp(-x^2 / 200^2)
+        #abs(x) < 200
+    end |> cu
+
     for batch ∈ 1:nbatches
         now() > max_datetime && break
         with_logger(logger) do
@@ -110,7 +116,7 @@ function update_correlations!(one_point_r, two_point_r, one_point_k, two_point_k
         two_point_corr!(buffer_two_point, sol)
         merge_averages!(two_point_r, n_ave, buffer_two_point, batchsize)
 
-        ft_sol = get_ft_sol(sol)
+        ft_sol = get_ft_sol(sol .* window)
         one_point_corr!(buffer_one_point, ft_sol)
         merge_averages!(one_point_k, n_ave, buffer_one_point, batchsize)
         two_point_corr!(buffer_two_point, ft_sol)

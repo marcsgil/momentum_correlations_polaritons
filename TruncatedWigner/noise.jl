@@ -3,8 +3,12 @@ include("../io.jl")
 include("equations.jl")
 include("../correlation_kernels.jl")
 
-saving_path = "TruncatedWigner/correlations.h5"
-group_name = "no_support"
+saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
+group_name = "no_support_center_gaussian_window"
+
+#= h5open(saving_path, "cw") do file
+    delete_object(file, group_name)
+end =#
 
 param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, n_ave = h5open(saving_path) do file
     group = file[group_name]
@@ -22,7 +26,7 @@ end
 tspan = (0.0f0, 50.0f0) .+ t_steady_state
 
 one_point_r, two_point_r, one_point_k, two_point_k, n_ave = update_correlations!(
-    one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, (param.L,), 10^4, 2, tspan, param.δt;
+    one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, (param.L,), 10^5, 80, tspan, param.δt;
     dispersion, potential, nonlinearity, pump, param, noise_func, show_progress=false)
 ##
 h5open(saving_path, "cw") do file

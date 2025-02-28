@@ -3,7 +3,7 @@ include("tracing.jl")
 include("io.jl")
 include("polariton_funcs.jl")
 
-G2_r, G2_k, param, steady_state = h5open("correlation_old.h5", "r") do file
+G2_r, G2_k, param, steady_state = h5open("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Old/correlation_old.h5", "r") do file
     group = file["no_support"]
     read(group, "G2_r"), read(group, "G2_k"), read_parameters(group), read(group, "steady_state")
 end
@@ -30,6 +30,7 @@ with_theme(theme_latexfonts()) do
     ylims!(ax, (-150, 150))
     hm = heatmap!(ax, rs, rs, (Array(real(G2_r)) .- 1) * 10^power, colorrange=(-5, 5), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$power})")
+    #save("Plots/position_correlations.pdf", fig)
     fig
 end
 ##
@@ -66,7 +67,7 @@ k1_star_down_in = find_zero(k -> dispersion_relation(k, param_down..., false) + 
 
 with_theme(theme_latexfonts()) do
     fig = Figure(fontsize=20, size=(800, 400))
-    ax1 = Axis(fig[1, 1]; xlabel=L"\delta k", ylabel=L"\omega")
+    ax1 = Axis(fig[1, 1]; xlabel=L"\delta k", ylabel=L"\delta \omega")
     ax2 = Axis(fig[1, 2]; xlabel=L"\delta k")
 
     hideydecorations!(ax2, grid=false)
@@ -79,37 +80,37 @@ with_theme(theme_latexfonts()) do
     lines!(ax2, ks2, ω₋_down, linewidth=4)
 
     for ax ∈ (ax1, ax2)
-        hlines!(ax, [Ω, - Ω], linestyle=:dash, color=:black)
+        hlines!(ax, [Ω, -Ω], linestyle=:dash, color=:black)
     end
 
     scatter!(ax1, k_up_out, Ω, color=:black, markersize=16)
-    text!(ax1, k_up_out, Ω, text=L"u1_\text{out}", fontsize=24, align=(:right, :bottom), offset=(-10,0))
+    text!(ax1, k_up_out, Ω, text=L"u1_\text{out}", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
     scatter!(ax1, k_up_in, Ω, color=:black, markersize=16)
-    text!(ax1, k_up_in, Ω, text=L"u1_\text{in}", fontsize=24, align=(:right, :bottom), offset=(-10,0))
+    text!(ax1, k_up_in, Ω, text=L"u1_\text{in}", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
     scatter!(ax1, k_star_up_out, -Ω, color=:black, markersize=16)
-    text!(ax1, k_star_up_out, -Ω, text=L"u1_\text{out}^*", fontsize=24, align=(:right, :bottom), offset=(-10,0))
+    text!(ax1, k_star_up_out, -Ω, text=L"u1_\text{out}^*", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
     scatter!(ax1, k_star_up_in, -Ω, color=:black, markersize=16)
-    text!(ax1, k_star_up_in, -Ω, text=L"u1_\text{in}^*", fontsize=24, align=(:right, :bottom), offset=(-10,0))
+    text!(ax1, k_star_up_in, -Ω, text=L"u1_\text{in}^*", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
 
     scatter!(ax2, k1_down_out, Ω, color=:red, markersize=16)
-    text!(ax2, k1_down_out, Ω, text=L"d1_\text{out}", fontsize=24, align=(:right, :bottom), offset=(-10,0), color=:red)
+    text!(ax2, k1_down_out, Ω, text=L"d1_\text{out}", fontsize=24, align=(:right, :bottom), offset=(-10, 0), color=:red)
     scatter!(ax2, k1_down_in, Ω, color=:red, markersize=16)
-    text!(ax2, k1_down_in, Ω, text=L"d1_\text{in}", fontsize=24, align=(:left, :bottom), offset=(10,0), color=:red)
+    text!(ax2, k1_down_in, Ω, text=L"d1_\text{in}", fontsize=24, align=(:left, :bottom), offset=(10, 0), color=:red)
     scatter!(ax2, k2_star_down_out, -Ω, color=:red, markersize=16)
-    text!(ax2, k2_star_down_out, -Ω, text=L"d2_\text{out}^*", fontsize=24, align=(:right, :bottom), offset=(-5,5), color=:red)
+    text!(ax2, k2_star_down_out, -Ω, text=L"d2_\text{out}^*", fontsize=24, align=(:right, :bottom), offset=(-5, 5), color=:red)
     scatter!(ax2, k2_star_down_in, -Ω, color=:red, markersize=16)
-    text!(ax2, k2_star_down_in, -Ω, text=L"d2_\text{in}^*", fontsize=24, align=(:right, :top), offset=(-10,-5), color=:red)
+    text!(ax2, k2_star_down_in, -Ω, text=L"d2_\text{in}^*", fontsize=24, align=(:right, :top), offset=(-10, -5), color=:red)
 
     scatter!(ax2, k2_down_out, Ω, color=:green, markersize=16)
-    text!(ax2, k2_down_out, Ω, text=L"d2_\text{out}", fontsize=24, align=(:left, :top), offset=(-5,-5), color=:green)
+    text!(ax2, k2_down_out, Ω, text=L"d2_\text{out}", fontsize=24, align=(:left, :top), offset=(-5, -5), color=:green)
     scatter!(ax2, k2_down_in, Ω, color=:green, markersize=16)
-    text!(ax2, k2_down_in, Ω, text=L"d2_\text{in}", fontsize=24, align=(:left, :bottom), offset=(10,0), color=:green)
+    text!(ax2, k2_down_in, Ω, text=L"d2_\text{in}", fontsize=24, align=(:left, :bottom), offset=(10, 0), color=:green)
     scatter!(ax2, k1_star_down_out, -Ω, color=:green, markersize=16)
-    text!(ax2, k1_star_down_out, -Ω, text=L"d1_\text{out}^*", fontsize=24, align=(:left, :top), offset=(5,-5), color=:green)
+    text!(ax2, k1_star_down_out, -Ω, text=L"d1_\text{out}^*", fontsize=24, align=(:left, :top), offset=(5, -5), color=:green)
     scatter!(ax2, k1_star_down_in, -Ω, color=:green, markersize=16)
-    text!(ax2, k1_star_down_in, -Ω, text=L"d1_\text{in}^*", fontsize=24, align=(:right, :top), offset=(-10,-5), color=:green)
+    text!(ax2, k1_star_down_in, -Ω, text=L"d1_\text{in}^*", fontsize=24, align=(:right, :top), offset=(-10, -5), color=:green)
 
-    #save("dispersion_relation.png", fig)
+    #save("Plots/dispersion_relation.pdf", fig)
     fig
 end
 ##
@@ -179,32 +180,44 @@ k2_min = find_zero(k -> dispersion_relation(k, param2...) - ω_ext1, (-1, -0.1))
 
 dispersion_relation(k1_max, param1...)
 
-bracket1 = (k_ext1, k1_max)
-bracket2 = (k2_min, k_ext2)
+bracket1 = (0, k1_max)
+bracket2 = (k2_min, 0)
 
 corr_d2d2_star, corr_d2d2_star′ = correlate(param1, bracket1, param2, bracket2, 128, true)
 ##
 ks = range(; start=-π / param.δL, step=2π / (size(G2_k, 1) * param.δL), length=size(G2_k, 1))
-J = (N÷2-230:N÷2+230) .+ 90
 power = 3
+
+ticks = [0.0]
+ticklabels = [L"%$tick" for tick in ticks]
+for (k, label) in zip((k_up, k_down, -k_down), (L"k_{\text{up}}", L"k_{\text{down}}", L"-k_{\text{down}}"))
+    push!(ticks, k)
+    push!(ticklabels, label)
+end
+
 
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(900, 600), fontsize=20)
-    ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime")
-    hm = heatmap!(ax, ks[J], ks[J], (G2_k[J, J] .- 1) * 10^3, colorrange=(-1, 1), colormap=:inferno)
+    ax = Axis(fig[1, 1]; aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime", xticks=(ticks, ticklabels), yticks=(ticks, ticklabels))
+    xlims!(ax, (-0.6, 1.3))
+    ylims!(ax, (-0.6, 1.3))
+    hm = heatmap!(ax, ks, ks, (G2_k .- 1) * 10^3, colorrange=(-1, 1), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$power})")
     for line_func! in (hlines!, vlines!)
-        line_func!(ax, k_up, color=:green, linestyle=:dash)
-        line_func!(ax, k_down, color=:green, linestyle=:dash)
+        for k in (k_up, k_down, -k_down)
+            line_func!(ax, k, color=:green, linestyle=:dash)
+        end
     end
     lines!(ax, corr_down_u1d2 .+ k_down, corr_up_u1d2 .+ k_up, linewidth=4, color=:blue, linestyle=:dash, label=L"u1_{\text{out}} \leftrightarrow d2_{\text{out}}")
     lines!(ax, corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=:red, linestyle=:dash, label=L"u1_{\text{out}} \leftrightarrow d1_{\text{out}}")
+    #lines!(ax, -corr_down_u1d2 .+ k_down, -corr_up_u1d2 .+ k_up, linewidth=4, color=:blue, linestyle=:dash, label=L"u1_{\text{out}} \leftrightarrow d2_{\text{out}}")
+    #lines!(ax, -corr_down_u1d1 .+ k_down, -corr_up_u1d1 .+ k_up, linewidth=4, color=:red, linestyle=:dash, label=L"u1_{\text{out}} \leftrightarrow d1_{\text{out}}")
     lines!(ax, corr_d1d2 .+ k_down, corr_d1d2′ .+ k_down, linewidth=4, color=:green, linestyle=:dash, label=L"d1_{\text{out}} \leftrightarrow d2_{\text{out}}")
     lines!(ax, corr_d1_star_d2_star′ .+ k_down, corr_d1_star_d2_star .+ k_down, linewidth=4, color=:purple, linestyle=:dash, label=L"d1_{\text{out}}^* \leftrightarrow d2_{\text{out}}^*")
-    lines!(ax, corr_d2d2_star .+ k_down, corr_d2d2_star′ .+ k_down, linewidth=4, color=:orange, linestyle=:dash, label=L"d2_{\text{out}} \leftrightarrow d2_{\text{out}}^*")
+    lines!(ax, corr_d2d2_star .+ k_down, corr_d2d2_star′ .+ k_down, linewidth=4, color=:orange, linestyle=:dash, label=L"d1_{\text{out}} \leftrightarrow d1_{\text{out}}^*")
     Legend(fig[1, 3], ax)
 
-    #save("momentum_correlations.png", fig)
+    #save("Plots/momentum_correlations.pdf", fig)
     fig
 end
 ##
@@ -223,7 +236,7 @@ J = (-len:len) .+ 470
 K = (-len:len) .+ 780
 power = 4
 
-x_period = range(start = -len * param.δL, step = param.δL, length = 2 * len)
+x_period = range(start=-len * param.δL, step=param.δL, length=2 * len)
 
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(1400, 600), fontsize=20)
@@ -242,7 +255,7 @@ J = (-len:len) .+ 390
 K = (-len:len) .+ 460
 power = 4
 
-x_period = range(start = -len * param.δL, step = param.δL, length = 2 * len)
+x_period = range(start=-len * param.δL, step=param.δL, length=2 * len)
 
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(1400, 600), fontsize=20)

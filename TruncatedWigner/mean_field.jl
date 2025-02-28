@@ -36,7 +36,7 @@ Amax = √Imax
 t_cycle = 300.0f0
 t_freeze = 288.0f0
 
-δt = 2.0f-2
+δt = 2.0f-1
 
 # Full parameter tuple
 param = (; δ₀, m, γ, ħ, L, g, V_damp, w_damp, V_def, w_def,
@@ -49,8 +49,6 @@ solver = StrangSplittingC(512, δt)
 ts, sol = GeneralizedGrossPitaevskii.solve(prob, solver, tspan);
 heatmap(rs, ts, Array(abs2.(sol)))
 ##
-lines(Array(abs2.(get_ft_sol(sol[:, end]))))
-##
 steady_state = sol[:, end]
 n = Array(abs2.(steady_state))
 n_up = n[N÷4]
@@ -59,9 +57,9 @@ n_down = n[3N÷4]
 with_theme(theme_latexfonts()) do
     fig = Figure(; fontsize=20)
     ax = Axis(fig[1, 1], xlabel=L"x", ylabel=L"gn")
-    offset = 300
-    J = N÷2-offset:N÷2+offset
-    lines!(ax, rs[J], g * n[J], linewidth=4)
+    #xlims!(ax, -200, 200)
+    #ylims!(ax, -0.01, 0.75)
+    lines!(ax, rs, g * n, linewidth=4)
     fig
 end
 ##
@@ -71,10 +69,10 @@ c = map((n, v) -> speed_of_sound(n, g, δ₀, m * v / ħ, ħ, m), n, v)
 with_theme(theme_latexfonts()) do
     fig = Figure(; fontsize=20)
     ax = Axis(fig[1, 1], xlabel=L"x")
-    offset = 100
-    J = N÷2-offset:N÷2+offset
-    lines!(ax, rs[J], c[J], linewidth=4, color=:blue, label=L"c")
-    lines!(ax, rs[J], v[J], linewidth=4, color=:red, label=L"v")
+    #xlims!(ax, -200, 200)
+    #ylims!(ax, 0, 2.5)
+    lines!(ax, rs, c, linewidth=4, color=:blue, label=L"c")
+    lines!(ax, rs, v, linewidth=4, color=:red, label=L"v")
     axislegend(; position=:lt)
     fig
 end
@@ -108,8 +106,8 @@ one_point_k, two_point_k = get_correlation_buffers(steady_state)
 
 n_ave = 0
 
-saving_path = "TruncatedWigner/correlations.h5"
-group_name = "no_support"
+saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
+group_name = "no_support_center_gaussian_window"
 
 h5open(saving_path, "cw") do file
     group = create_group(file, group_name)
