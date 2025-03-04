@@ -5,7 +5,7 @@ include("../polariton_funcs.jl")
 include("equations.jl")
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "no_support_center_gaussian_window"
+group_name = "test"
 
 param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k = h5open(saving_path) do file
     group = file[group_name]
@@ -215,8 +215,8 @@ end
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(900, 600), fontsize=20)
     ax = Axis(fig[1, 1]; aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime", xticks=(ticks, ticklabels), yticks=(ticks, ticklabels))
-    #xlims!(ax, (-0.6, 1.3))
-    #ylims!(ax, (-0.6, 1.3))
+    xlims!(ax, (-0.6, 1.3))
+    ylims!(ax, (-0.6, 1.3))
     hm = heatmap!(ax, ks, ks, (g2_k .- 1) * 10^power, colorrange=(-5, 5), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$power})")
     for line_func! in (hlines!, vlines!)

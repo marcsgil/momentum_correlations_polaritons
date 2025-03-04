@@ -68,7 +68,7 @@ prob = GrossPitaevskiiProblem(u0, lengths; dispersion, potential, nonlinearity, 
 tspan = (0, 1000.0f0)
 δt = 1.0f-2
 solver = StrangSplittingB(1024, δt)
-ts, sol = solve(prob, solver, tspan)
+ts, sol = GeneralizedGrossPitaevskii.solve(prob, solver, tspan)
 u0_steady = sol[:, end]
 ##
 with_theme(theme_latexfonts()) do
@@ -153,11 +153,11 @@ log_δψ̃[:, J[2]] .= mi
 with_theme(theme_latexfonts()) do
     fig = Figure(fontsize=20)
     ax = Axis(fig[1, 1]; xlabel=L"k", ylabel=L"\omega")
-    ω₊ = dispersion_relation.(ks, k_pump, g, ns[end], δ, m, true)
-    ω₋ = dispersion_relation.(ks, k_pump, g, ns[end], δ, m, false)
+    #ω₊ = dispersion_relation.(ks, k_pump, g, ns[end], δ, m, true)
+    #ω₋ = dispersion_relation.(ks, k_pump, g, ns[end], δ, m, false)
     heatmap!(ax, ks, -ωs, log_δψ̃, colormap=:magma)
-    lines!(ax, ks, ω₊, color=:grey, linestyle=:dash, linewidth=2)
-    lines!(ax, ks, ω₋, color=:grey, linestyle=:dash, linewidth=2)
+    #lines!(ax, ks, ω₊, color=:grey, linestyle=:dash, linewidth=2)
+    #lines!(ax, ks, ω₋, color=:grey, linestyle=:dash, linewidth=2)
     ylims!(ax, extrema(ωs))
     fig
 end
@@ -183,16 +183,16 @@ mi = minimum(log_δψ̃)
 log_δψ̃[J[1], :] .= mi
 log_δψ̃[:, J[2]] .= mi
 
-k_down = sqrt(kps_sq[700])
+#k_down = sqrt(kps_sq[700])
 
 with_theme(theme_latexfonts()) do
     fig = Figure(fontsize=20)
     ax = Axis(fig[1, 1]; xlabel=L"k", ylabel=L"\omega")
-    ω₊ = dispersion_relation.(ks, k_down, g, 0, 0, m, true)
-    ω₋ = dispersion_relation.(ks, k_down, g, 0, 0, m, false)
+    #ω₊ = dispersion_relation.(ks, k_down, g, 0, 0, m, true)
+    #ω₋ = dispersion_relation.(ks, k_down, g, 0, 0, m, false)
     heatmap!(ax, ks, -ωs, log_δψ̃, colormap=:magma)
-    lines!(ax, ks, ω₊, color=:red, linestyle=:dot, linewidth=4)
-    lines!(ax, ks, ω₋, color=:blue, linestyle=:dot, linewidth=4)
+    #lines!(ax, ks, ω₊, color=:red, linestyle=:dot, linewidth=4)
+    #lines!(ax, ks, ω₋, color=:blue, linestyle=:dot, linewidth=4)
     ylims!(ax, extrema(ωs))
     fig
 end

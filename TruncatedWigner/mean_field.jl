@@ -56,7 +56,7 @@ n_down = n[3N÷4]
 
 with_theme(theme_latexfonts()) do
     fig = Figure(; fontsize=20)
-    ax = Axis(fig[1, 1], xlabel=L"x", ylabel=L"gn")
+    ax = Axis(fig[1, 1], xlabel=L"x", ylabel=L"gn", xticks = (-800:200:800))
     #xlims!(ax, -200, 200)
     #ylims!(ax, -0.01, 0.75)
     lines!(ax, rs, g * n, linewidth=4)
@@ -107,7 +107,7 @@ one_point_k, two_point_k = get_correlation_buffers(steady_state)
 n_ave = 0
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "no_support_center_gaussian_window"
+group_name = "test"
 
 h5open(saving_path, "cw") do file
     group = create_group(file, group_name)

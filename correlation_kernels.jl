@@ -98,8 +98,9 @@ function update_correlations!(one_point_r, two_point_r, one_point_k, two_point_k
 
     rs = range(; start=-param.L / 2, step=param.δL, length=length(one_point_r))
     window = map(rs) do x
-        exp(-x^2 / 200^2)
+        #exp(-x^2 / 200^2)
         #abs(x) < 200
+        one(x)
     end |> cu
 
     for batch ∈ 1:nbatches
