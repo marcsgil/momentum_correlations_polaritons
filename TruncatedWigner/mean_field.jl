@@ -56,7 +56,7 @@ n_down = n[3N÷4]
 
 with_theme(theme_latexfonts()) do
     fig = Figure(; fontsize=20)
-    ax = Axis(fig[1, 1], xlabel=L"x", ylabel=L"gn", xticks = (-800:200:800))
+    ax = Axis(fig[1, 1], xlabel=L"x", ylabel=L"gn", xticks=(-800:200:800))
     #xlims!(ax, -200, 200)
     #ylims!(ax, -0.01, 0.75)
     lines!(ax, rs, g * n, linewidth=4)
@@ -104,6 +104,10 @@ end
 one_point_r, two_point_r = get_correlation_buffers(steady_state)
 one_point_k, two_point_k = get_correlation_buffers(steady_state)
 
+window1 = exp.(-(rs .- 0).^2 / 200^2)
+window2 = copy(window1)
+windows = cat(window1, window2, dims=2)
+
 n_ave = 0
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
@@ -119,4 +123,5 @@ h5open(saving_path, "cw") do file
     group["one_point_k"] = Array(one_point_k)
     group["two_point_k"] = Array(two_point_k)
     group["n_ave"] = [n_ave]
+    group["windows"] = windows
 end

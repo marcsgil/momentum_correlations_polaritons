@@ -10,7 +10,7 @@ group_name = "test"
     delete_object(file, group_name)
 end =#
 
-param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, n_ave = h5open(saving_path) do file
+param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, n_ave, windows = h5open(saving_path) do file
     group = file[group_name]
 
     read_parameters(group),
@@ -20,14 +20,15 @@ param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_
     group["two_point_r"] |> read |> cu,
     group["one_point_k"] |> read |> cu,
     group["two_point_k"] |> read |> cu,
-    group["n_ave"][1]
+    group["n_ave"][1],
+    group["windows"] |> read |> cu
 end
 ##
 tspan = (0.0f0, 50.0f0) .+ t_steady_state
 
 one_point_r, two_point_r, one_point_k, two_point_k, n_ave = update_correlations!(
     one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, (param.L,), 10^5, 1, tspan, param.δt;
-    dispersion, potential, nonlinearity, pump, param, noise_func, show_progress=false)
+    dispersion, potential, nonlinearity, pump, param, noise_func, show_progress=true);
 ##
 h5open(saving_path, "cw") do file
     group = file[group_name]
