@@ -96,8 +96,8 @@ with_theme(theme_latexfonts()) do
 end
 ##
 function get_correlation_buffers(steady_state)
-    one_point = real(zero(steady_state))
-    two_point = one_point * one_point'
+    two_point = zero(steady_state) * zero(steady_state)'
+    one_point = stack(two_point for a ∈ 1:2, b ∈ 1:2)
     one_point, two_point
 end
 

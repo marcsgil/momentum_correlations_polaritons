@@ -37,13 +37,7 @@ end
 
 noise_func(ψ, param) = √(param.γ / 2 / param.δL)
 
-function calculate_g2(one_point, two_point, factor)
-    n = one_point .- factor
-    δ = one(two_point)
-    (two_point .- factor .* (1 .+ δ) .* (n .+ n' .+ factor)) ./ (n .* n')
-end
-
-function calculate_commutators(windows, L)
+function calculate_momentum_commutators(windows, L)
     @kernel function kernel!(dest, windows, rs, ks)
         a, b = @index(Global, NTuple)
         for n ∈ axes(dest, 4), m ∈ axes(dest, 3)
@@ -68,17 +62,27 @@ function calculate_commutators(windows, L)
     dest
 end
 
+function calculate_position_commutators(one_point, δL)
+    commutators_r = similar(one_point)
+    commutators_r[:, :, 1, 1] .= 1 / δL
+    commutators_r[:, :, 2, 2] .= 1 / δL
+    commutators_r[:, :, 1, 2] .= one(two_point_r) ./ δL
+    commutators_r[:, :, 2, 1] .= one(two_point_r) ./ δL
+
+    commutators_r
+end
+
 otherindex(x) = mod(x, 2) + 1
 
-#= function calculate_g2(first_order, second_order, commutators, factor)
-    G2 = second_order .+ factor^2 .* (commutators[:, :, 1, 1] .* commutators[:, :, 2, 2] .+ commutators[:, :, 1, 2] .* commutators[:, :, 2, 1]) ./ 4
+function calculate_g2(first_order, second_order, commutators)
+    G2 = second_order .+ (commutators[:, :, 1, 1] .* commutators[:, :, 2, 2] .+ commutators[:, :, 1, 2] .* commutators[:, :, 2, 1]) ./ 4
 
     for n ∈ axes(first_order, 4), m ∈ axes(first_order, 3)
-        G2 .-= factor .* first_order[:, :, m, n] .* commutators[:, :, otherindex(m), otherindex(n)] ./ 2
+        G2 .-= first_order[:, :, m, n] .* commutators[:, :, otherindex(m), otherindex(n)] ./ 2
     end
 
-    n1 = first_order[:, :, 1, 1] - factor * commutators[:, :, 1, 1] / 2
-    n2 = first_order[:, :, 2, 2] - factor * commutators[:, :, 2, 2] / 2
+    n1 = first_order[:, :, 1, 1] - commutators[:, :, 1, 1] / 2
+    n2 = first_order[:, :, 2, 2] - commutators[:, :, 2, 2] / 2
 
-    G2 ./ n1 ./ n2
-end =#
+    real(G2 ./ n1 ./ n2)
+end

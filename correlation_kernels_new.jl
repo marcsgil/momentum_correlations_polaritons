@@ -8,7 +8,7 @@ function first_order_correlations!(dest, sol)
             for r ∈ axes(sol, 3)
                 x += sol[(k, k′)[m], m, r] * conj(sol[(k, k′)[n], n, r])
             end
-            dest[k, k′, m, n] = x / size(sol, 2)
+            dest[k, k′, m, n] = x / size(sol, 3)
         end
     end
 
@@ -21,9 +21,9 @@ function second_order_correlations!(dest, sol)
         j, k = @index(Global, NTuple)
         x = zero(eltype(dest))
         for m ∈ axes(sol, 3)
-            x += abs2(sol[j, 1, m]) * abs2(sol[k, 1, m])
+            x += abs2(sol[j, 1, m]) * abs2(sol[k, 2, m])
         end
-        dest[j, k] = x / size(sol, 2)
+        dest[j, k] = x / size(sol, 3)
     end
 
     backend = get_backend(dest)
@@ -38,7 +38,7 @@ function get_ft_sol(sol::AbstractArray{T}) where {T<:Number}
     ifftshift(fft(fftshift(sol, 1), 1), 1)
 end
 
-function update_correlations!(first_order_r, second_roder_r, first_order_k, second_order_k, n_ave, steady_state, windows,
+function update_correlations!(first_order_r, second_order_r, first_order_k, second_order_k, n_ave, steady_state, windows,
     lengths, batchsize, nbatches, tspan, δt;
     show_progress=true, noise_eltype=eltype(steady_state), log_path="log.txt", max_datetime=typemax(DateTime), kwargs...)
     u0 = stack(steady_state for _ ∈ 1:batchsize)
@@ -48,7 +48,7 @@ function update_correlations!(first_order_r, second_roder_r, first_order_k, seco
     solver = StrangSplittingC(1, δt)
 
     buffer_first_order = similar(first_order_r)
-    buffer_second_order = similar(second_roder_r)
+    buffer_second_order = similar(second_order_r)
 
     io = open(log_path, "w+")
     logger = SimpleLogger(io)
@@ -66,7 +66,7 @@ function update_correlations!(first_order_r, second_roder_r, first_order_k, seco
         first_order_correlations!(buffer_first_order, sol)
         merge_averages!(first_order_r, n_ave, buffer_first_order, batchsize)
         second_order_correlations!(buffer_second_order, sol)
-        merge_averages!(second_roder_r, n_ave, buffer_second_order, batchsize)
+        merge_averages!(second_order_r, n_ave, buffer_second_order, batchsize)
 
         ft_sol = get_ft_sol(sol .* windows) / sqrt(param.N)
         first_order_correlations!(buffer_first_order, ft_sol)
@@ -79,5 +79,5 @@ function update_correlations!(first_order_r, second_roder_r, first_order_k, seco
 
     close(io)
 
-    one_point_r, two_point_r, one_point_k, two_point_k, n_ave
+    first_order_r, second_order_r, first_order_k, second_order_k, n_ave
 end

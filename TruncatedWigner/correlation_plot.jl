@@ -7,7 +7,7 @@ include("equations.jl")
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
 group_name = "test"
 
-param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k = h5open(saving_path) do file
+param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, windows = h5open(saving_path) do file
     group = file[group_name]
 
     read_parameters(group),
@@ -16,13 +16,17 @@ param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_
     group["one_point_r"] |> read,
     group["two_point_r"] |> read,
     group["one_point_k"] |> read,
-    group["two_point_k"] |> read
+    group["two_point_k"] |> read,
+    group["windows"] |> read
 end
 
-one_point_r
+#two_point_r
 
-g2_r = calculate_g2(one_point_r, two_point_r, 1 / 2param.δL)
-g2_k = calculate_g2(one_point_k, two_point_k, 1 / 2)
+commutators_r = calculate_position_commutators(one_point_r, param.δL)
+commutators_k = calculate_momentum_commutators(windows, param.L)
+g2_r = calculate_g2(one_point_r, two_point_r, commutators_r)
+g2_k = calculate_g2(one_point_k, two_point_k, commutators_k)
+
 
 N = param.N
 L = param.L
@@ -96,35 +100,35 @@ with_theme(theme_latexfonts()) do
     lines!(ax2, ks2, ω₋_down, linewidth=4)
 
     for ax ∈ (ax1, ax2)
-        hlines!(ax, [Ω, - Ω], linestyle=:dash, color=:black)
+        hlines!(ax, [Ω, -Ω], linestyle=:dash, color=:black)
     end
 
     scatter!(ax1, k_up_out, Ω, color=:black, markersize=16)
-    text!(ax1, k_up_out, Ω, text=L"u1_\text{out}", fontsize=24, align=(:right, :bottom), offset=(-10,0))
+    text!(ax1, k_up_out, Ω, text=L"u1_\text{out}", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
     scatter!(ax1, k_up_in, Ω, color=:black, markersize=16)
-    text!(ax1, k_up_in, Ω, text=L"u1_\text{in}", fontsize=24, align=(:right, :bottom), offset=(-10,0))
+    text!(ax1, k_up_in, Ω, text=L"u1_\text{in}", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
     scatter!(ax1, k_star_up_out, -Ω, color=:black, markersize=16)
-    text!(ax1, k_star_up_out, -Ω, text=L"u1_\text{out}^*", fontsize=24, align=(:right, :bottom), offset=(-10,0))
+    text!(ax1, k_star_up_out, -Ω, text=L"u1_\text{out}^*", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
     scatter!(ax1, k_star_up_in, -Ω, color=:black, markersize=16)
-    text!(ax1, k_star_up_in, -Ω, text=L"u1_\text{in}^*", fontsize=24, align=(:right, :bottom), offset=(-10,0))
+    text!(ax1, k_star_up_in, -Ω, text=L"u1_\text{in}^*", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
 
     scatter!(ax2, k1_down_out, Ω, color=:red, markersize=16)
-    text!(ax2, k1_down_out, Ω, text=L"d1_\text{out}", fontsize=24, align=(:right, :bottom), offset=(-10,0), color=:red)
+    text!(ax2, k1_down_out, Ω, text=L"d1_\text{out}", fontsize=24, align=(:right, :bottom), offset=(-10, 0), color=:red)
     scatter!(ax2, k1_down_in, Ω, color=:red, markersize=16)
-    text!(ax2, k1_down_in, Ω, text=L"d1_\text{in}", fontsize=24, align=(:left, :bottom), offset=(10,0), color=:red)
+    text!(ax2, k1_down_in, Ω, text=L"d1_\text{in}", fontsize=24, align=(:left, :bottom), offset=(10, 0), color=:red)
     scatter!(ax2, k2_star_down_out, -Ω, color=:red, markersize=16)
-    text!(ax2, k2_star_down_out, -Ω, text=L"d2_\text{out}^*", fontsize=24, align=(:right, :bottom), offset=(-5,5), color=:red)
+    text!(ax2, k2_star_down_out, -Ω, text=L"d2_\text{out}^*", fontsize=24, align=(:right, :bottom), offset=(-5, 5), color=:red)
     scatter!(ax2, k2_star_down_in, -Ω, color=:red, markersize=16)
-    text!(ax2, k2_star_down_in, -Ω, text=L"d2_\text{in}^*", fontsize=24, align=(:right, :top), offset=(-10,-5), color=:red)
+    text!(ax2, k2_star_down_in, -Ω, text=L"d2_\text{in}^*", fontsize=24, align=(:right, :top), offset=(-10, -5), color=:red)
 
     scatter!(ax2, k2_down_out, Ω, color=:green, markersize=16)
-    text!(ax2, k2_down_out, Ω, text=L"d2_\text{out}", fontsize=24, align=(:left, :top), offset=(-5,-5), color=:green)
+    text!(ax2, k2_down_out, Ω, text=L"d2_\text{out}", fontsize=24, align=(:left, :top), offset=(-5, -5), color=:green)
     scatter!(ax2, k2_down_in, Ω, color=:green, markersize=16)
-    text!(ax2, k2_down_in, Ω, text=L"d2_\text{in}", fontsize=24, align=(:left, :bottom), offset=(10,0), color=:green)
+    text!(ax2, k2_down_in, Ω, text=L"d2_\text{in}", fontsize=24, align=(:left, :bottom), offset=(10, 0), color=:green)
     scatter!(ax2, k1_star_down_out, -Ω, color=:green, markersize=16)
-    text!(ax2, k1_star_down_out, -Ω, text=L"d1_\text{out}^*", fontsize=24, align=(:left, :top), offset=(5,-5), color=:green)
+    text!(ax2, k1_star_down_out, -Ω, text=L"d1_\text{out}^*", fontsize=24, align=(:left, :top), offset=(5, -5), color=:green)
     scatter!(ax2, k1_star_down_in, -Ω, color=:green, markersize=16)
-    text!(ax2, k1_star_down_in, -Ω, text=L"d1_\text{in}^*", fontsize=24, align=(:right, :top), offset=(-10,-5), color=:green)
+    text!(ax2, k1_star_down_in, -Ω, text=L"d1_\text{in}^*", fontsize=24, align=(:right, :top), offset=(-10, -5), color=:green)
 
     #save("dispersion_relation.png", fig)
     fig
@@ -252,7 +256,7 @@ J = (-len:len) .+ 470
 K = (-len:len) .+ 780
 power = 4
 
-x_period = range(start = -len * param.δL, step = param.δL, length = 2 * len)
+x_period = range(start=-len * param.δL, step=param.δL, length=2 * len)
 
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(1400, 600), fontsize=20)
@@ -271,7 +275,7 @@ J = (-len:len) .+ 390
 K = (-len:len) .+ 460
 power = 4
 
-x_period = range(start = -len * param.δL, step = param.δL, length = 2 * len)
+x_period = range(start=-len * param.δL, step=param.δL, length=2 * len)
 
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(1400, 600), fontsize=20)
