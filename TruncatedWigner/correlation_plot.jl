@@ -20,8 +20,6 @@ param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_
     group["windows"] |> read
 end
 
-#two_point_r
-
 commutators_r = calculate_position_commutators(one_point_r, param.δL)
 commutators_k = calculate_momentum_commutators(windows, param.L)
 g2_r = calculate_g2(one_point_r, two_point_r, commutators_r)
@@ -51,7 +49,7 @@ with_theme(theme_latexfonts()) do
     ylims!(ax, (-150, 150))
     hm = heatmap!(ax, rs, rs, (g2_r .- 1) * 10^power, colorrange=(-5, 5), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$power})")
-    fig
+    #fig
 end
 ##
 ks1 = LinRange(-1, 1, 512)
@@ -131,7 +129,7 @@ with_theme(theme_latexfonts()) do
     text!(ax2, k1_star_down_in, -Ω, text=L"d1_\text{in}^*", fontsize=24, align=(:right, :top), offset=(-10, -5), color=:green)
 
     #save("dispersion_relation.png", fig)
-    fig
+    #fig
 end
 ##
 #Hawking (u1 out, d2 out)
@@ -210,7 +208,7 @@ power = 3
 
 ticks = [0.0]
 ticklabels = [L"%$tick" for tick in ticks]
-for (k, label) in zip((k_up, k_down, -k_down), (L"k_{\text{up}}", L"k_{\text{down}}", L"-k_{\text{down}}"))
+for (k, label) in zip((k_up, k_down), (L"k_{\text{up}}", L"k_{\text{down}}", L"-k_{\text{down}}"))
     push!(ticks, k)
     push!(ticklabels, label)
 end
@@ -219,22 +217,20 @@ end
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(900, 600), fontsize=20)
     ax = Axis(fig[1, 1]; aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime", xticks=(ticks, ticklabels), yticks=(ticks, ticklabels))
-    xlims!(ax, (-0.6, 1.3))
-    ylims!(ax, (-0.6, 1.3))
-    hm = heatmap!(ax, ks, ks, (g2_k .- 1) * 10^power, colorrange=(-5, 5), colormap=:inferno)
+    xlims!(ax, (-0.7, 1.3))
+    ylims!(ax, (-0.7, 1.3))
+    hm = heatmap!(ax, ks, ks, (g2_k .- 1) * 10^power, colorrange=(-2, 2), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$power})")
     for line_func! in (hlines!, vlines!)
-        for k in (k_up, k_down, -k_down)
+        for k in (k_up, k_down)
             line_func!(ax, k, color=:green, linestyle=:dash)
         end
     end
     lines!(ax, corr_down_u1d2 .+ k_down, corr_up_u1d2 .+ k_up, linewidth=4, color=:blue, linestyle=:dash, label=L"u1_{\text{out}} \leftrightarrow d2_{\text{out}}")
-    lines!(ax, corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=:red, linestyle=:dash, label=L"u1_{\text{out}} \leftrightarrow d1_{\text{out}}")
-    #lines!(ax, -corr_down_u1d2 .+ k_down, -corr_up_u1d2 .+ k_up, linewidth=4, color=:blue, linestyle=:dash, label=L"u1_{\text{out}} \leftrightarrow d2_{\text{out}}")
-    #lines!(ax, -corr_down_u1d1 .+ k_down, -corr_up_u1d1 .+ k_up, linewidth=4, color=:red, linestyle=:dash, label=L"u1_{\text{out}} \leftrightarrow d1_{\text{out}}")
-    lines!(ax, corr_d1d2 .+ k_down, corr_d1d2′ .+ k_down, linewidth=4, color=:green, linestyle=:dash, label=L"d1_{\text{out}} \leftrightarrow d2_{\text{out}}")
-    lines!(ax, corr_d1_star_d2_star′ .+ k_down, corr_d1_star_d2_star .+ k_down, linewidth=4, color=:purple, linestyle=:dash, label=L"d1_{\text{out}}^* \leftrightarrow d2_{\text{out}}^*")
-    lines!(ax, corr_d2d2_star .+ k_down, corr_d2d2_star′ .+ k_down, linewidth=4, color=:orange, linestyle=:dash, label=L"d1_{\text{out}} \leftrightarrow d1_{\text{out}}^*")
+    lines!(ax, corr_down_u1d1 .+ k_down, -corr_up_u1d1 .+ k_up, linewidth=4, color=:red, linestyle=:dash, label=L"u1_{\text{out}} \leftrightarrow d1_{\text{out}}")
+    #lines!(ax, corr_d1d2 .+ k_down, corr_d1d2′ .+ k_down, linewidth=4, color=:green, linestyle=:dash, label=L"d1_{\text{out}} \leftrightarrow d2_{\text{out}}")
+    #lines!(ax, corr_d1_star_d2_star′ .+ k_down, corr_d1_star_d2_star .+ k_down, linewidth=4, color=:purple, linestyle=:dash, label=L"d1_{\text{out}}^* \leftrightarrow d2_{\text{out}}^*")
+    #lines!(ax, corr_d2d2_star .+ k_down, corr_d2d2_star′ .+ k_down, linewidth=4, color=:orange, linestyle=:dash, label=L"d1_{\text{out}} \leftrightarrow d1_{\text{out}}^*")
     Legend(fig[1, 3], ax)
 
     #save("Plots/momentum_correlations.pdf", fig)

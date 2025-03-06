@@ -2,18 +2,16 @@ using KernelAbstractions, FFTW, Logging, Dates, LinearAlgebra
 
 function first_order_correlations!(dest, sol)
     @kernel function kernel!(dest, sol)
-        k, k′ = @index(Global, NTuple)
-        for n ∈ axes(dest, 4), m ∈ axes(dest, 3)
-            x = zero(eltype(dest))
-            for r ∈ axes(sol, 3)
-                x += sol[(k, k′)[m], m, r] * conj(sol[(k, k′)[n], n, r])
-            end
-            dest[k, k′, m, n] = x / size(sol, 3)
+        k, k′, m, n = @index(Global, NTuple)
+        x = zero(eltype(dest))
+        for r ∈ axes(sol, 3)
+            x += sol[(k, k′)[m], m, r] * conj(sol[(k, k′)[n], n, r])
         end
+        dest[k, k′, m, n] = x / size(sol, 3)
     end
 
     backend = get_backend(dest)
-    kernel!(backend)(dest, sol, ndrange=size(dest)[1:2])
+    kernel!(backend)(dest, sol, ndrange=size(dest))
 end
 
 function second_order_correlations!(dest, sol)
@@ -68,7 +66,7 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
         second_order_correlations!(buffer_second_order, sol)
         merge_averages!(second_order_r, n_ave, buffer_second_order, batchsize)
 
-        ft_sol = get_ft_sol(sol .* windows) / sqrt(param.N)
+        ft_sol = get_ft_sol(sol .* windows)
         first_order_correlations!(buffer_first_order, ft_sol)
         merge_averages!(first_order_k, n_ave, buffer_first_order, batchsize)
         second_order_correlations!(buffer_second_order, ft_sol)

@@ -59,7 +59,7 @@ function calculate_momentum_commutators(windows, L)
     backend = get_backend(dest)
     kernel!(backend)(dest, windows, rs, ks, ndrange=size(dest)[1:2])
 
-    dest
+    dest * L / N^2
 end
 
 function calculate_position_commutators(one_point, δL)

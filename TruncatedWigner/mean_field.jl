@@ -104,8 +104,8 @@ end
 one_point_r, two_point_r = get_correlation_buffers(steady_state)
 one_point_k, two_point_k = get_correlation_buffers(steady_state)
 
-window1 = exp.(-(rs .- 0).^2 / 200^2)
-window2 = copy(window1)
+window1 = exp.(-(rs .- 100).^2 / 100^2)
+window2 = exp.(-(rs .+ 100).^2 / 100^2)
 windows = cat(window1, window2, dims=2)
 
 n_ave = 0
