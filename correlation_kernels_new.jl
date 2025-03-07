@@ -1,31 +1,38 @@
 using KernelAbstractions, FFTW, Logging, Dates, LinearAlgebra
 
-function first_order_correlations!(dest, sol)
-    @kernel function kernel!(dest, sol)
-        k, k′, m, n = @index(Global, NTuple)
+choose(x1, x2, m) = isone(m) ? x1 : x2
+
+function first_order_correlations!(dest, sol1, sol2)
+    @kernel function kernel!(dest, sol1, sol2)
+        a, b, m, n = @index(Global, NTuple)
+        idx1 = choose(a, b, m)
+        idx2 = choose(a, b, n)
+        field1 = choose(sol1, sol2, m)
+        field2 = choose(sol1, sol2, n)
+
         x = zero(eltype(dest))
-        for r ∈ axes(sol, 3)
-            x += sol[(k, k′)[m], m, r] * conj(sol[(k, k′)[n], n, r])
+        for r ∈ axes(sol1, 2)
+            x += field1[idx1, r] * conj(field2[idx2, r])
         end
-        dest[k, k′, m, n] = x / size(sol, 3)
+        dest[a, b, m, n] = x / size(sol1, 2)
     end
 
     backend = get_backend(dest)
-    kernel!(backend)(dest, sol, ndrange=size(dest))
+    kernel!(backend)(dest, sol1, sol2, ndrange=size(dest))
 end
 
-function second_order_correlations!(dest, sol)
-    @kernel function kernel!(dest, sol)
+function second_order_correlations!(dest, sol1, sol2)
+    @kernel function kernel!(dest, sol1, sol2)
         j, k = @index(Global, NTuple)
         x = zero(eltype(dest))
-        for m ∈ axes(sol, 3)
-            x += abs2(sol[j, 1, m]) * abs2(sol[k, 2, m])
+        for m ∈ axes(sol1, 2)
+            x += abs2(sol1[j, m]) * abs2(sol2[k, m])
         end
-        dest[j, k] = x / size(sol, 3)
+        dest[j, k] = x / size(sol1, 2)
     end
 
     backend = get_backend(dest)
-    kernel!(backend)(dest, sol, ndrange=size(dest))
+    kernel!(backend)(dest, sol1, sol2, ndrange=size(dest))
 end
 
 function merge_averages!(dest, n_dest, new, n_new)
@@ -36,7 +43,7 @@ function get_ft_sol(sol::AbstractArray{T}) where {T<:Number}
     ifftshift(fft(fftshift(sol, 1), 1), 1)
 end
 
-function update_correlations!(first_order_r, second_order_r, first_order_k, second_order_k, n_ave, steady_state, windows,
+function update_correlations!(first_order_r, second_order_r, first_order_k, second_order_k, n_ave, steady_state, kernel1, kernel2,
     lengths, batchsize, nbatches, tspan, δt;
     show_progress=true, noise_eltype=eltype(steady_state), log_path="log.txt", max_datetime=typemax(DateTime), kwargs...)
     u0 = stack(steady_state for _ ∈ 1:batchsize)
@@ -47,6 +54,8 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
 
     buffer_first_order = similar(first_order_r)
     buffer_second_order = similar(second_order_r)
+    ft_sol1 = similar(u0)
+    ft_sol2 = similar(u0)
 
     io = open(log_path, "w+")
     logger = SimpleLogger(io)
@@ -58,18 +67,19 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
         end
         flush(io)
 
-        ts, _sol = GeneralizedGrossPitaevskii.solve(prob, solver, tspan; save_start=false, show_progress)
-        _sol = dropdims(_sol, dims=3)
-        sol = stack((_sol, _sol), dims=2)
-        first_order_correlations!(buffer_first_order, sol)
+        sol = dropdims(GeneralizedGrossPitaevskii.solve(prob, solver, tspan; save_start=false, show_progress)[2], dims=3)
+
+        first_order_correlations!(buffer_first_order, sol, sol)
         merge_averages!(first_order_r, n_ave, buffer_first_order, batchsize)
-        second_order_correlations!(buffer_second_order, sol)
+        second_order_correlations!(buffer_second_order, sol, sol)
         merge_averages!(second_order_r, n_ave, buffer_second_order, batchsize)
 
-        ft_sol = get_ft_sol(sol .* windows)
-        first_order_correlations!(buffer_first_order, ft_sol)
+        mul!(ft_sol1, kernel1, sol)
+        mul!(ft_sol2, kernel2, sol)
+
+        first_order_correlations!(buffer_first_order, ft_sol1, ft_sol2)
         merge_averages!(first_order_k, n_ave, buffer_first_order, batchsize)
-        second_order_correlations!(buffer_second_order, ft_sol)
+        second_order_correlations!(buffer_second_order, ft_sol1, ft_sol2)
         merge_averages!(second_order_k, n_ave, buffer_second_order, batchsize)
 
         n_ave += batchsize

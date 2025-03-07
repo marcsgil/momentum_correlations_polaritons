@@ -37,29 +37,28 @@ end
 
 noise_func(ψ, param) = √(param.γ / 2 / param.δL)
 
-function calculate_momentum_commutators(windows, L)
-    @kernel function kernel!(dest, windows, rs, ks)
-        a, b = @index(Global, NTuple)
-        for n ∈ axes(dest, 4), m ∈ axes(dest, 3)
-            x = zero(eltype(dest))
-            k_vals = (ks[a], ks[b])
-            Δk = k_vals[n] - k_vals[m]
+choose(x1, x2, m) = isone(m) ? x1 : x2
 
-            for o ∈ axes(windows, 1)
-                x += cis(Δk * rs[o]) * windows[o, m] * conj(windows[o, n])
-            end
-            dest[a, b, m, n] = x
+function calculate_momentum_commutators(kernel1, kernel2, L)
+    @kernel function kernel!(dest, kernel1, kernel2)
+        a, b, m, n = @index(Global, NTuple)
+        idx1 = choose(a, b, m)
+        idx2 = choose(a, b, n)
+        field1 = choose(kernel1, kernel2, m)
+        field2 = choose(kernel1, kernel2, n)
+
+        x = zero(eltype(dest))
+        for r ∈ axes(kernel1, 2)
+            x += field1[idx1, r] * conj(field2[idx2, r])
         end
+        dest[a, b, m, n] = x
     end
 
-    N = size(windows, 1)
-    rs = range(; start=-L / 2, step=L / N, length=N)
-    ks = range(; start=-π * N / L, step=2π / L, length=N)
-    dest = similar(windows, complex(eltype(windows)), N, N, 2, 2)
+    dest = similar(kernel1, size(kernel1)..., 2, 2)
     backend = get_backend(dest)
-    kernel!(backend)(dest, windows, rs, ks, ndrange=size(dest)[1:2])
+    kernel!(backend)(dest, kernel1, kernel2, ndrange=size(dest))
 
-    dest * L / N^2
+    dest * L / length(kernel1)
 end
 
 function calculate_position_commutators(one_point, δL)

@@ -8,11 +8,7 @@ CUDA.device!(1)
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
 group_name = "test"
 
-#= h5open(saving_path, "cw") do file
-    delete_object(file, group_name)
-end =#
-
-param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, n_ave, windows = h5open(saving_path) do file
+param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, n_ave, kernel1, kernel2 = h5open(saving_path) do file
     group = file[group_name]
 
     read_parameters(group),
@@ -23,15 +19,16 @@ param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_
     group["one_point_k"] |> read |> cu,
     group["two_point_k"] |> read |> cu,
     group["n_ave"][1],
-    group["windows"] |> read |> cu
+    group["kernel1"] |> read |> cu,
+    group["kernel2"] |> read |> cu
 end
 ##
 tspan = (0.0f0, 50.0f0) .+ t_steady_state
 
 one_point_r, two_point_r, one_point_k, two_point_k, n_ave = update_correlations!(
-    one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, windows, (param.L,), 10^5, 70, tspan, param.δt;
+    one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, kernel1, kernel2, (param.L,), 10^5, 5, tspan, param.δt;
     dispersion, potential, nonlinearity, pump, param, noise_func, show_progress=true);
-
+##
 h5open(saving_path, "cw") do file
     group = file[group_name]
     group["one_point_r"][:, :, :, :] = Array(one_point_r)

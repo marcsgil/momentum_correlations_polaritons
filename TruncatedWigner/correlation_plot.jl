@@ -7,7 +7,7 @@ include("equations.jl")
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
 group_name = "test"
 
-param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, windows = h5open(saving_path) do file
+param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, kernel1, kernel2 = h5open(saving_path) do file
     group = file[group_name]
 
     read_parameters(group),
@@ -17,11 +17,12 @@ param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_
     group["two_point_r"] |> read,
     group["one_point_k"] |> read,
     group["two_point_k"] |> read,
-    group["windows"] |> read
+    group["kernel1"] |> read,
+    group["kernel2"] |> read
 end
 
 commutators_r = calculate_position_commutators(one_point_r, param.δL)
-commutators_k = calculate_momentum_commutators(windows, param.L)
+commutators_k = calculate_momentum_commutators(kernel1, kernel2, param.L)
 g2_r = calculate_g2(one_point_r, two_point_r, commutators_r)
 g2_k = calculate_g2(one_point_k, two_point_k, commutators_k)
 
@@ -49,7 +50,7 @@ with_theme(theme_latexfonts()) do
     ylims!(ax, (-150, 150))
     hm = heatmap!(ax, rs, rs, (g2_r .- 1) * 10^power, colorrange=(-5, 5), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$power})")
-    #fig
+    fig
 end
 ##
 ks1 = LinRange(-1, 1, 512)

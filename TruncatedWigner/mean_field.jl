@@ -8,7 +8,8 @@ L = 1600.0f0
 lengths = (L,)
 N = 1024
 δL = L / N
-rs = range(; start=-L / 2, step=L / N, length=N)
+rs = range(; start=-L / 2, step=δL, length=N)
+ks = range(; start=-π / δL, step=2π / L, length=N)
 
 # Polariton parameters
 ħ = 0.6582f0 #meV.ps
@@ -47,9 +48,9 @@ prob = GrossPitaevskiiProblem(u0, lengths; dispersion, potential, nonlinearity, 
 tspan = (0, 1200.0f0)
 solver = StrangSplittingC(512, δt)
 ts, sol = GeneralizedGrossPitaevskii.solve(prob, solver, tspan);
+steady_state = sol[:, end]
 heatmap(rs, ts, Array(abs2.(sol)))
 ##
-steady_state = sol[:, end]
 n = Array(abs2.(steady_state))
 n_up = n[N÷4]
 n_down = n[3N÷4]
@@ -101,27 +102,43 @@ function get_correlation_buffers(steady_state)
     one_point, two_point
 end
 
-one_point_r, two_point_r = get_correlation_buffers(steady_state)
-one_point_k, two_point_k = get_correlation_buffers(steady_state)
+function create_save_group(_steady_state, saving_path, group_name, win_func1, param1, win_func2, param2)
+    steady_state = Array(_steady_state)
 
-window1 = exp.(-(rs .- 100).^2 / 100^2)
-window2 = exp.(-(rs .+ 100).^2 / 100^2)
-windows = cat(window1, window2, dims=2)
+    one_point_r, two_point_r = get_correlation_buffers(steady_state)
+    one_point_k, two_point_k = get_correlation_buffers(steady_state)
 
-n_ave = 0
+    kernel1 = similar(two_point_k)
+    kernel2 = similar(two_point_k)
+
+    GeneralizedGrossPitaevskii.grid_map!(kernel1, args -> cis(-prod(args)) * win_func1(args..., param1), (ks, rs))
+    GeneralizedGrossPitaevskii.grid_map!(kernel2, args -> cis(-prod(args)) * win_func2(args..., param2), (ks, rs))
+
+    n_ave = 0
+
+    h5open(saving_path, "cw") do file
+        group = create_group(file, group_name)
+        write_parameters!(group, param)
+        group["steady_state"] = steady_state
+        group["t_steady_state"] = tspan[end]
+        group["one_point_r"] = one_point_r
+        group["two_point_r"] = two_point_r
+        group["one_point_k"] = one_point_k
+        group["two_point_k"] = two_point_k
+        group["n_ave"] = [n_ave]
+        group["kernel1"] = kernel1
+        group["kernel2"] = kernel2
+    end
+end
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
 group_name = "test"
 
-h5open(saving_path, "cw") do file
-    group = create_group(file, group_name)
-    write_parameters!(group, param)
-    group["steady_state"] = Array(steady_state)
-    group["t_steady_state"] = tspan[end]
-    group["one_point_r"] = Array(one_point_r)
-    group["two_point_r"] = Array(two_point_r)
-    group["one_point_k"] = Array(one_point_k)
-    group["two_point_k"] = Array(two_point_k)
-    group["n_ave"] = [n_ave]
-    group["windows"] = windows
-end
+win_func1(k, x, param) = exp(-(x - 100)^2 / 100^2)
+win_func2(k, x, param) = exp(-(x + 100)^2 / 100^2)
+
+#= h5open(saving_path, "cw") do file
+    delete_object(file, group_name)
+end =#
+
+create_save_group(steady_state, saving_path, group_name, win_func1, nothing, win_func2, nothing)
