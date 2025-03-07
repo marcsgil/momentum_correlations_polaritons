@@ -130,7 +130,7 @@ with_theme(theme_latexfonts()) do
     text!(ax2, k1_star_down_in, -Ω, text=L"d1_\text{in}^*", fontsize=24, align=(:right, :top), offset=(-10, -5), color=:green)
 
     #save("dispersion_relation.png", fig)
-    #fig
+    fig
 end
 ##
 #Hawking (u1 out, d2 out)
@@ -170,7 +170,7 @@ k1_max = find_zero(k -> dispersion_relation(k, param1...) - ω_ext2, (0.1, 1))
 k2_min = find_zero(k -> dispersion_relation(k, param2...) - ω_ext1, (-1, -0.1))
 
 bracket1 = (0, k1_max)
-bracket2 = (0, k_ext2)
+bracket2 = (0, k_ext2 .- 0.001)
 
 corr_d1d2, corr_d1d2′ = correlate(param1, bracket1, param2, bracket2, 128, false)
 ## (d1_star, d2_star)

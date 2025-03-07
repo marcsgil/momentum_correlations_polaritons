@@ -3,7 +3,7 @@ include("../io.jl")
 include("equations.jl")
 include("../correlation_kernels_new.jl")
 
-CUDA.device!(1)
+CUDA.device!(0)
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
 group_name = "test"
@@ -26,9 +26,9 @@ end
 tspan = (0.0f0, 50.0f0) .+ t_steady_state
 
 one_point_r, two_point_r, one_point_k, two_point_k, n_ave = update_correlations!(
-    one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, kernel1, kernel2, (param.L,), 10^5, 5, tspan, param.δt;
+    one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, kernel1, kernel2, (param.L,), 10^5, 100, tspan, param.δt;
     dispersion, potential, nonlinearity, pump, param, noise_func, show_progress=true);
-##
+
 h5open(saving_path, "cw") do file
     group = file[group_name]
     group["one_point_r"][:, :, :, :] = Array(one_point_r)

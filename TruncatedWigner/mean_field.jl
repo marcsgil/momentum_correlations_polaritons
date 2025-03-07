@@ -14,8 +14,7 @@ ks = range(; start=-π / δL, step=2π / L, length=N)
 # Polariton parameters
 ħ = 0.6582f0 #meV.ps
 γ = 0.047f0 / ħ
-m = ħ^2 / 2.5f0
-#m = 1 / 18f0
+m = 1 / 6f0 # meV.ps^2/μm^2; This is 3×10^-5 the electron mass
 g = 0.0003f0 / ħ
 δ₀ = 0.49 / ħ
 
@@ -70,8 +69,8 @@ c = map((n, v) -> speed_of_sound(n, g, δ₀, m * v / ħ, ħ, m), n, v)
 with_theme(theme_latexfonts()) do
     fig = Figure(; fontsize=20)
     ax = Axis(fig[1, 1], xlabel=L"x")
-    #xlims!(ax, -200, 200)
-    #ylims!(ax, 0, 2.5)
+    xlims!(ax, -200, 200)
+    ylims!(ax, 0, 2.5)
     lines!(ax, rs, c, linewidth=4, color=:blue, label=L"c")
     lines!(ax, rs, v, linewidth=4, color=:red, label=L"v")
     axislegend(; position=:lt)
