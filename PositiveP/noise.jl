@@ -26,8 +26,9 @@ end
 tspan = (0.0f0, 50.0f0) .+ t_steady_state
 
 one_point_r, two_point_r, one_point_k, two_point_k, n_ave = update_correlations!(
-    one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, kernel1, kernel2, (param.L,), 10^5, 9, tspan, param.δt;
-    dispersion, potential, nonlinearity, pump, param, noise_func, show_progress=true, noise_eltype=Float32);
+    one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, kernel1, kernel2, (param.L,), 10^5, 10^3, tspan, param.δt;
+    dispersion, potential, nonlinearity, pump, param, noise_func, show_progress=false, noise_eltype=Float32,
+    max_datetime=DateTime(2025, 3, 10, 15, 20));
 
 h5open(saving_path, "cw") do file
     group = file[group_name]

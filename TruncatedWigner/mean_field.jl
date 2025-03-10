@@ -131,7 +131,7 @@ function create_save_group(_steady_state, saving_path, group_name, win_func1, pa
 end
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "test_new"
+group_name = "long"
 
 win_func1(k, x, param) = exp(-(x - 100)^2 / 100^2)
 win_func2(k, x, param) = exp(-(x + 100)^2 / 100^2)

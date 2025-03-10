@@ -5,7 +5,7 @@ include("../polariton_funcs.jl")
 include("equations.jl")
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "test_new"
+group_name = "test"
 
 param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, kernel1, kernel2 = h5open(saving_path) do file
     group = file[group_name]
@@ -41,7 +41,6 @@ k_down = √(2m * δ₀ / ħ)
 
 n_up = abs2(Array(steady_state)[N÷4])
 
-J = N÷2-100:N÷2+100
 power = 5
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(730, 600), fontsize=20)
@@ -50,6 +49,18 @@ with_theme(theme_latexfonts()) do
     ylims!(ax, (-150, 150))
     hm = heatmap!(ax, rs, rs, (g2_r .- 1) * 10^power, colorrange=(-5, 5), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$power})")
+    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/g2_postion.png", fig)
+    fig
+end
+##
+with_theme(theme_latexfonts()) do 
+    fig = Figure(; fontsize=20)
+    ax = Axis(fig[1, 1], xlabel=L"x \ (\mu m)", xticks=-800:200:800)
+    lines!(ax, rs, abs2.(steady_state), linewidth=4, label = L"|\psi(x)|^2")
+    lines!(ax, rs, 1500 * abs.(kernel1)[1, :], linewidth=4, linestyle=:dash, label = "Window 1 (a.u.)")
+    lines!(ax, rs, 1500 * abs.(kernel2)[1, :], linewidth=4, linestyle=:dash, label = "Window 2 (a.u.)")
+    axislegend(ax)
+    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/steady_state_windows.png", fig)
     fig
 end
 ##
@@ -86,8 +97,8 @@ k1_star_down_in = find_zero(k -> dispersion_relation(k, param_down..., false) + 
 
 with_theme(theme_latexfonts()) do
     fig = Figure(fontsize=20, size=(800, 400))
-    ax1 = Axis(fig[1, 1]; xlabel=L"\delta k", ylabel=L"\omega")
-    ax2 = Axis(fig[1, 2]; xlabel=L"\delta k")
+    ax1 = Axis(fig[1, 1]; xlabel=L"\delta k", ylabel=L"\delta \omega", title="Upstream")
+    ax2 = Axis(fig[1, 2]; xlabel=L"\delta k", title="Downstream")
 
     hideydecorations!(ax2, grid=false)
     ylims!(ax1, (-1, 1))
@@ -103,13 +114,13 @@ with_theme(theme_latexfonts()) do
     end
 
     scatter!(ax1, k_up_out, Ω, color=:black, markersize=16)
-    text!(ax1, k_up_out, Ω, text=L"u1_\text{out}", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
+    text!(ax1, k_up_out, Ω, text=L"u_\text{out}", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
     scatter!(ax1, k_up_in, Ω, color=:black, markersize=16)
-    text!(ax1, k_up_in, Ω, text=L"u1_\text{in}", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
+    text!(ax1, k_up_in, Ω, text=L"u_\text{in}", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
     scatter!(ax1, k_star_up_out, -Ω, color=:black, markersize=16)
-    text!(ax1, k_star_up_out, -Ω, text=L"u1_\text{out}^*", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
+    text!(ax1, k_star_up_out, -Ω, text=L"u_\text{out}^*", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
     scatter!(ax1, k_star_up_in, -Ω, color=:black, markersize=16)
-    text!(ax1, k_star_up_in, -Ω, text=L"u1_\text{in}^*", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
+    text!(ax1, k_star_up_in, -Ω, text=L"u_\text{in}^*", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
 
     scatter!(ax2, k1_down_out, Ω, color=:red, markersize=16)
     text!(ax2, k1_down_out, Ω, text=L"d1_\text{out}", fontsize=24, align=(:right, :bottom), offset=(-10, 0), color=:red)
@@ -129,7 +140,7 @@ with_theme(theme_latexfonts()) do
     scatter!(ax2, k1_star_down_in, -Ω, color=:green, markersize=16)
     text!(ax2, k1_star_down_in, -Ω, text=L"d1_\text{in}^*", fontsize=24, align=(:right, :top), offset=(-10, -5), color=:green)
 
-    #save("dispersion_relation.png", fig)
+    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/dispersion_relation.png", fig)
     fig
 end
 ##
@@ -227,14 +238,16 @@ with_theme(theme_latexfonts()) do
             line_func!(ax, k, color=:green, linestyle=:dash)
         end
     end
-    lines!(ax, corr_down_u1d2 .+ k_down, corr_up_u1d2 .+ k_up, linewidth=4, color=:blue, linestyle=:dash, label=L"u1_{\text{out}} \leftrightarrow d2_{\text{out}}")
-    lines!(ax, corr_down_u1d1 .+ k_down, -corr_up_u1d1 .+ k_up, linewidth=4, color=:red, linestyle=:dash, label=L"u1_{\text{out}} \leftrightarrow d1_{\text{out}}")
+    lines!(ax, -corr_down_u1d2 .+ k_down, corr_up_u1d2 .+ k_up, linewidth=4, color=:green, linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d2_{\text{out}}^*")
+    lines!(ax, -LinRange(-1, -0.06768, 512) .+ k_up, LinRange(-1, -0.06768, 512) .+ k_up, linewidth=4, color=:red, linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow u_{\text{out}}^*")
+    #lines!(ax, -corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=:red, linestyle=:dash, label=L"u1_{\text{out}} \leftrightarrow d1_{\text{out}}")
     #lines!(ax, corr_d1d2 .+ k_down, corr_d1d2′ .+ k_down, linewidth=4, color=:green, linestyle=:dash, label=L"d1_{\text{out}} \leftrightarrow d2_{\text{out}}")
     #lines!(ax, corr_d1_star_d2_star′ .+ k_down, corr_d1_star_d2_star .+ k_down, linewidth=4, color=:purple, linestyle=:dash, label=L"d1_{\text{out}}^* \leftrightarrow d2_{\text{out}}^*")
     #lines!(ax, corr_d2d2_star .+ k_down, corr_d2d2_star′ .+ k_down, linewidth=4, color=:orange, linestyle=:dash, label=L"d1_{\text{out}} \leftrightarrow d1_{\text{out}}^*")
+    scatter!(ax, k_up - 0.3, k_up + 0.15, color=:cyan, markersize=16, label = "?")
     Legend(fig[1, 3], ax)
 
-    #save("Plots/momentum_correlations.pdf", fig)
+    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/g2_momentum.pdf", fig)
     fig
 end
 ##
