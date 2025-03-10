@@ -9,7 +9,7 @@ function potential(rs, param)
     param.V_damp * damping_potential(rs, -param.L / 2, param.L / 2, param.w_damp)
 end
 
-nonlinearity(ψ, param) = param.g * abs2(ψ)
+nonlinearity(ψ, param) = param.g * abs2(first(ψ))
 
 function A(t, Amax, t_cycle, t_freeze)
     _t = ifelse(t > t_freeze, t_freeze, t)

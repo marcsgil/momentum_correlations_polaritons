@@ -42,15 +42,15 @@ t_freeze = 288.0f0
 param = (; δ₀, m, γ, ħ, L, g, V_damp, w_damp, V_def, w_def,
     Amax, t_cycle, t_freeze, δL, N, k_down, k_up, divide, factor, δt)
 
-u0 = CUDA.zeros(ComplexF32, N)
+u0 = (CUDA.zeros(ComplexF32, N), )
 prob = GrossPitaevskiiProblem(u0, lengths; dispersion, potential, nonlinearity, pump, param)
 tspan = (0, 1200.0f0)
 solver = StrangSplittingC(512, δt)
 ts, sol = GeneralizedGrossPitaevskii.solve(prob, solver, tspan);
-steady_state = sol[:, end]
-heatmap(rs, ts, Array(abs2.(sol)))
+steady_state = map(x -> x[:, end], sol)
+heatmap(rs, ts, Array(abs2.(sol[1])))
 ##
-n = Array(abs2.(steady_state))
+n = Array(abs2.(steady_state[1]))
 n_up = n[N÷4]
 n_down = n[3N÷4]
 
@@ -63,7 +63,7 @@ with_theme(theme_latexfonts()) do
     fig
 end
 ##
-v = velocity(Array(steady_state), ħ, m, δL)
+v = velocity(Array(steady_state[1]), ħ, m, δL)
 c = map((n, v) -> speed_of_sound(n, g, δ₀, m * v / ħ, ħ, m), n, v)
 
 with_theme(theme_latexfonts()) do
@@ -96,13 +96,13 @@ with_theme(theme_latexfonts()) do
 end
 ##
 function get_correlation_buffers(steady_state)
-    two_point = zero(steady_state) * zero(steady_state)'
+    two_point = zero(steady_state[1]) * zero(steady_state[1])'
     one_point = stack(two_point for a ∈ 1:2, b ∈ 1:2)
     one_point, two_point
 end
 
 function create_save_group(_steady_state, saving_path, group_name, win_func1, param1, win_func2, param2)
-    steady_state = Array(_steady_state)
+    steady_state = Array.(_steady_state)
 
     one_point_r, two_point_r = get_correlation_buffers(steady_state)
     one_point_k, two_point_k = get_correlation_buffers(steady_state)
@@ -118,7 +118,7 @@ function create_save_group(_steady_state, saving_path, group_name, win_func1, pa
     h5open(saving_path, "cw") do file
         group = create_group(file, group_name)
         write_parameters!(group, param)
-        group["steady_state"] = steady_state
+        group["steady_state"] = stack(steady_state...)
         group["t_steady_state"] = tspan[end]
         group["one_point_r"] = one_point_r
         group["two_point_r"] = two_point_r
@@ -131,7 +131,7 @@ function create_save_group(_steady_state, saving_path, group_name, win_func1, pa
 end
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "test"
+group_name = "test_new"
 
 win_func1(k, x, param) = exp(-(x - 100)^2 / 100^2)
 win_func2(k, x, param) = exp(-(x + 100)^2 / 100^2)

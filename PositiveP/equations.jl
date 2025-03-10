@@ -46,6 +46,6 @@ function noise_func(ψ, param)
     SVector(val * ψ[1], conj(val) * ψ[2])
 end
 
-function calculate_g2(n, two_point)
-    two_point ./ (n .* n')
+function calculate_g2(one_point, two_point)
+    real(two_point ./ (one_point[:, :, 1] .* one_point[:, :, 2]))
 end
