@@ -131,10 +131,10 @@ function create_save_group(_steady_state, saving_path, group_name, win_func1, pa
 end
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "long"
+group_name = "farther_windows"
 
-win_func1(k, x, param) = exp(-(x - 100)^2 / 100^2)
-win_func2(k, x, param) = exp(-(x + 100)^2 / 100^2)
+win_func1(k, x, param) = exp(-(x - 150)^2 / 100^2)
+win_func2(k, x, param) = exp(-(x + 150)^2 / 100^2)
 
 #= h5open(saving_path, "cw") do file
     delete_object(file, group_name)

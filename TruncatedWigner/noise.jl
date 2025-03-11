@@ -3,10 +3,8 @@ include("../io.jl")
 include("equations.jl")
 include("../correlation_kernels.jl")
 
-CUDA.device!(0)
-
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "long"
+group_name = "farther_windows"
 
 param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, n_ave, kernel1, kernel2 = h5open(saving_path) do file
     group = file[group_name]
@@ -26,9 +24,9 @@ end
 tspan = (0.0f0, 50.0f0) .+ t_steady_state
 
 one_point_r, two_point_r, one_point_k, two_point_k, n_ave = update_correlations!(
-    one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, kernel1, kernel2, (param.L,), 10^5, 10^6, tspan, param.δt;
+    one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, kernel1, kernel2, (param.L,), 10^5, 10^5, tspan, param.δt;
     dispersion, potential, nonlinearity, pump, param, noise_func, show_progress=false,
-    max_datetime=DateTime(2025, 3, 11, 9, 0));
+    max_datetime=DateTime(2025, 3, 12, 9, 0));
 
 h5open(saving_path, "cw") do file
     group = file[group_name]
