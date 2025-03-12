@@ -5,7 +5,7 @@ include("../polariton_funcs.jl")
 include("equations.jl")
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "farther_windows"
+group_name = "long"
 
 param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, kernel1, kernel2 = h5open(saving_path) do file
     group = file[group_name]
@@ -53,18 +53,18 @@ with_theme(theme_latexfonts()) do
     ylims!(ax, (-150, 150))
     hm = heatmap!(ax, rs, rs, (g2_r .- 1) * 10^power, colorrange=(-5, 5), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$power})")
-    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/g2_postion.png", fig)
+    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/g2_postion.pdf", fig)
     fig
 end
 ##
 with_theme(theme_latexfonts()) do 
     fig = Figure(; fontsize=20)
     ax = Axis(fig[1, 1], xlabel=L"x \ (\mu m)", xticks=-800:200:800)
-    lines!(ax, rs, abs2.(steady_state), linewidth=4, label = L"|\psi(x)|^2")
-    lines!(ax, rs, 1500 * abs.(kernel1)[1, :], linewidth=4, linestyle=:dash, label = "Window 1 (a.u.)")
-    lines!(ax, rs, 1500 * abs.(kernel2)[1, :], linewidth=4, linestyle=:dash, label = "Window 2 (a.u.)")
+    lines!(ax, rs, g .* abs2.(steady_state), linewidth=4, label = L"gn")
+    lines!(ax, rs, abs.(kernel1)[1, :], linewidth=4, linestyle=:dash, label = "Window 1 (a.u.)")
+    lines!(ax, rs, abs.(kernel2)[1, :], linewidth=4, linestyle=:dash, label = "Window 2 (a.u.)")
     axislegend(ax)
-    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/steady_state_windows.png", fig)
+    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/windows_100.pdf", fig)
     fig
 end
 ##
@@ -144,7 +144,7 @@ with_theme(theme_latexfonts()) do
     scatter!(ax2, k1_star_down_in, -Ω, color=:green, markersize=16)
     text!(ax2, k1_star_down_in, -Ω, text=L"d1_\text{in}^*", fontsize=24, align=(:right, :top), offset=(-10, -5), color=:green)
 
-    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/dispersion_relation.png", fig)
+    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/dispersion_relation.pdf", fig)
     fig
 end
 ##
@@ -185,7 +185,7 @@ k1_max = find_zero(k -> dispersion_relation(k, param1...) - ω_ext2, (0.1, 1))
 k2_min = find_zero(k -> dispersion_relation(k, param2...) - ω_ext1, (-1, -0.1))
 
 bracket1 = (0, k1_max)
-bracket2 = (0, k_ext2 .- 0.001)
+bracket2 = (0, k_ext2)
 
 corr_d1d2, corr_d1d2′ = correlate(param1, bracket1, param2, bracket2, 128, false)
 ## (d1_star, d2_star)
@@ -231,7 +231,7 @@ end
 
 
 with_theme(theme_latexfonts()) do
-    fig = Figure(; size=(700, 600), fontsize=20)
+    fig = Figure(; size=(900, 600), fontsize=20)
     ax = Axis(fig[1, 1]; aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime", xticks=(ticks, ticklabels), yticks=(ticks, ticklabels))
     xlims!(ax, (-0.7, 1.3))
     ylims!(ax, (-0.7, 1.3))
@@ -239,66 +239,20 @@ with_theme(theme_latexfonts()) do
     Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$power})")
     for line_func! in (hlines!, vlines!)
         for k in (k_up, k_down)
-            line_func!(ax, k, color=:green, linestyle=:dash)
+            line_func!(ax, k, color=:black, linestyle=:dash)
         end
     end
-    #lines!(ax, -corr_down_u1d2 .+ k_down, -corr_up_u1d2 .+ k_up, linewidth=4, color=:green, linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d2_{\text{out}}^*")
-    #lines!(ax, -LinRange(-1, -0.06768, 512) .+ k_up, LinRange(-1, -0.06768, 512) .+ k_up, linewidth=4, color=:red, linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow u_{\text{out}}^*")
-    #lines!(ax, corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=:red, linestyle=:dash, label=L"u1_{\text{out}} \leftrightarrow d1_{\text{out}}")
+    lines!(ax, corr_down_u1d2 .+ k_down, -corr_up_u1d2 .+ k_up, linewidth=4, color=(:green, 0.6), linestyle=:dash, label=L"u_{\text{out}}^* \leftrightarrow d2_{\text{out}}")
+    lines!(ax, corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=(:purple, 0.6), linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d1_{\text{out}}")
+    #lines!(ax, corr_down_u1d1 .+ k_down, -corr_up_u1d1 .+ k_up, linewidth=4, color=(:blue, 0.6), linestyle=:dash, label=L"u_{\text{out}}^* \leftrightarrow d1_{\text{out}}")
+    lines!(ax, -corr_down_u1d2 .+ k_down, corr_up_u1d2 .+ k_up, linewidth=4, color=(:red, 0.6), linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d2_{\text{out}}^*")
+    lines!(ax, -corr_down_u1d2 .+ k_down, -corr_up_u1d2 .+ k_up, linewidth=4, color=(:orange, 0.6), linestyle=:dash, label=L"u_{\text{out}}^* \leftrightarrow d2_{\text{out}}^*")
     #lines!(ax, corr_d1d2 .+ k_down, corr_d1d2′ .+ k_down, linewidth=4, color=:green, linestyle=:dash, label=L"d1_{\text{out}} \leftrightarrow d2_{\text{out}}")
     #lines!(ax, corr_d1_star_d2_star′ .+ k_down, corr_d1_star_d2_star .+ k_down, linewidth=4, color=:purple, linestyle=:dash, label=L"d1_{\text{out}}^* \leftrightarrow d2_{\text{out}}^*")
     #lines!(ax, corr_d2d2_star .+ k_down, corr_d2d2_star′ .+ k_down, linewidth=4, color=:orange, linestyle=:dash, label=L"d1_{\text{out}} \leftrightarrow d1_{\text{out}}^*")
     #scatter!(ax, k_up - 0.3, k_up + 0.15, color=:cyan, markersize=16, label = "?")
-    #Legend(fig[1, 3], ax)
+    Legend(fig[1, 3], ax)
 
-    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/g2_momentum_long.png", fig)
-    fig
-end
-##
-with_theme(theme_latexfonts()) do
-    fig = Figure(; size=(850, 600), fontsize=20)
-    ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime")
-    hm = heatmap!(ax, (G2_k .- 1) * 10^3, colorrange=(-1, 1), colormap=:inferno)
-    Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$power})")
-    fig
-end
-##
-dft(x) = fftshift(fft(ifftshift(x)))
-
-len = 30
-J = (-len:len) .+ 470
-K = (-len:len) .+ 780
-power = 4
-
-x_period = range(start=-len * param.δL, step=param.δL, length=2 * len)
-
-with_theme(theme_latexfonts()) do
-    fig = Figure(; size=(1400, 600), fontsize=20)
-    ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime")
-    hm = heatmap!(ax, ks[J], ks[K], (G2_k[J, K] .- 1) * 10^power, colorrange=(-2, 2), colormap=:inferno)
-    Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$power})")
-    ax2 = Axis(fig[1, 3], aspect=DataAspect(), xlabel=L"x", ylabel=L"x\prime")
-    heatmap!(ax2, x_period, x_period, (abs2.(dft(G2_k[J, K] .- 1))), colormap=:inferno)
-
-    #save("period_close_to_hawking.png", fig)
-    fig
-end
-##
-len = 30
-J = (-len:len) .+ 390
-K = (-len:len) .+ 460
-power = 4
-
-x_period = range(start=-len * param.δL, step=param.δL, length=2 * len)
-
-with_theme(theme_latexfonts()) do
-    fig = Figure(; size=(1400, 600), fontsize=20)
-    ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime")
-    hm = heatmap!(ax, ks[J], ks[K], (G2_k[J, K] .- 1) * 10^power, colorrange=(-2, 2), colormap=:inferno)
-    Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$power})")
-    ax2 = Axis(fig[1, 3], aspect=DataAspect(), xlabel=L"x", ylabel=L"x\prime")
-    heatmap!(ax2, x_period, x_period, (abs2.(dft(G2_k[J, K] .- 1) * 10^4)), colormap=:inferno)
-
-    #save("period_close_diagonal.png", fig)
+    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/g2_momentum_150.pdf", fig)
     fig
 end

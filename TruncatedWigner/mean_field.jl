@@ -60,6 +60,7 @@ with_theme(theme_latexfonts()) do
     #xlims!(ax, -200, 200)
     #ylims!(ax, -0.01, 0.75)
     lines!(ax, rs, g * n, linewidth=4)
+    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/densities.pdf", fig)
     fig
 end
 ##
@@ -74,6 +75,7 @@ with_theme(theme_latexfonts()) do
     lines!(ax, rs, c, linewidth=4, color=:blue, label=L"c")
     lines!(ax, rs, v, linewidth=4, color=:red, label=L"v")
     axislegend(; position=:lt)
+    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/velocities.pdf", fig)
     fig
 end
 ##
@@ -92,6 +94,7 @@ with_theme(theme_latexfonts()) do
     scatter!(ax, abs2(A_stop), n_up, color=:black, markersize=16)
     scatter!(ax, abs2(A_stop * factor), n_down, color=:black, markersize=16)
     axislegend()
+    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/bistability.pdf", fig)
     fig
 end
 ##
