@@ -4,6 +4,10 @@ function dispersion(ks, param)
     -im * param.γ / 2 + param.ħ * sum(abs2, ks) / 2param.m - param.δ₀
 end
 
+function damping_potential(x::NTuple{1}, xmin, xmax, width)
+    -im * exp(-(x[1] - xmin)^2 / width^2) + exp(-(x[1] - xmax)^2 / width^2)
+end
+
 function potential(rs, param)
     param.V_def * exp(-sum(abs2, rs) / param.w_def^2) +
     param.V_damp * damping_potential(rs, -param.L / 2, param.L / 2, param.w_damp)
