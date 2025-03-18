@@ -15,12 +15,12 @@ ks = range(; start=-π / δL, step=2π / L, length=N)
 ħ = 0.6582f0 #meV.ps
 γ = 0.047f0 / ħ
 m = 1 / 6f0 # meV.ps^2/μm^2; This is 3×10^-5 the electron mass
-g = 0.0003f0 / ħ
+g = 3f-4 / ħ
 δ₀ = 0.49 / ħ
 
 # Potential parameters
-V_damp = 100.0f0
-w_damp = 10.0f0
+V_damp = 1000.0f0
+w_damp = 30.0f0
 V_def = 0.85f0 / ħ
 w_def = 0.75f0
 
@@ -31,22 +31,22 @@ divide = -7
 factor = 0
 
 # Bistability cycle parameters
-Imax = 90.0f0
-Amax = √Imax
-t_cycle = 300.0f0
-t_freeze = 288.0f0
+Amax = 12f0
+t_cycle = 600.0f0
+t_freeze = 582.0f0
 
-δt = 2.0f-1
+dt = 1.0f-2
+nsaves = 512
 
 # Full parameter tuple
 param = (; δ₀, m, γ, ħ, L, g, V_damp, w_damp, V_def, w_def,
-    Amax, t_cycle, t_freeze, δL, N, k_down, k_up, divide, factor, δt)
+    Amax, t_cycle, t_freeze, δL, N, k_down, k_up, divide, factor, dt)
 
 u0 = (CUDA.zeros(ComplexF32, N), )
 prob = GrossPitaevskiiProblem(u0, lengths; dispersion, potential, nonlinearity, pump, param)
 tspan = (0, 1200.0f0)
-solver = StrangSplittingC(512, δt)
-ts, sol = GeneralizedGrossPitaevskii.solve(prob, solver, tspan);
+alg = StrangSplittingA()
+ts, sol = GeneralizedGrossPitaevskii.solve(prob, alg, tspan; dt, nsaves);
 steady_state = map(x -> x[:, end], sol)
 heatmap(rs, ts, Array(abs2.(sol[1])))
 ##
@@ -79,8 +79,10 @@ with_theme(theme_latexfonts()) do
     fig
 end
 ##
-ns_up_theo = LinRange(0, 1600, 512)
+ns_up_theo = LinRange(0, 1800, 512)
 Is_up_theo = eq_of_state.(ns_up_theo, g, δ₀, k_up, ħ, m, γ)
+
+γ^2 * detuning(δ₀, k_up, ħ, m) / 4g
 
 ns_down_theo = LinRange(0, 800, 512)
 Is_down_theo = eq_of_state.(ns_down_theo, g, δ₀, k_down, ħ, m, γ)
@@ -134,7 +136,7 @@ function create_save_group(_steady_state, saving_path, group_name, win_func1, pa
 end
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "farther_windows"
+group_name = "test_simple_solver"
 
 win_func1(k, x, param) = exp(-(x - 150)^2 / 100^2)
 win_func2(k, x, param) = exp(-(x + 150)^2 / 100^2)
