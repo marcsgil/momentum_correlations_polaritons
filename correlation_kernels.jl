@@ -71,8 +71,8 @@ function merge_averages!(dest, n_dest, new, n_new)
 end
 
 function update_correlations!(first_order_r, second_order_r, first_order_k, second_order_k, n_ave, steady_state, kernel1, kernel2,
-    lengths, batchsize, nbatches, tspan, δt;
-    show_progress=true, noise_eltype=eltype(first(steady_state)), log_path="log.txt", max_datetime=typemax(DateTime), 
+    lengths, batchsize, nbatches, tspan, dt;
+    show_progress=true, noise_eltype=eltype(first(steady_state)), log_path="log.txt", max_datetime=typemax(DateTime),
     rng=Random.default_rng(), kwargs...)
     u0 = map(steady_state) do x
         stack(x for _ ∈ 1:batchsize)
@@ -81,7 +81,7 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
     noise_prototype = similar.(u0, noise_eltype)
 
     prob = GrossPitaevskiiProblem(u0, lengths; noise_prototype, param, kwargs...)
-    solver = SimpleSolver(1, δt)
+    solver = StrangSplittingC()
 
     buffer_first_order = similar(first_order_r)
     buffer_second_order = similar(second_order_r)
@@ -91,8 +91,12 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
     io = open(log_path, "w+")
     logger = SimpleLogger(io)
 
-    steps_per_save = GeneralizedGrossPitaevskii.resolve_fixed_timestepping(solver, tspan)[2]
-    progress = Progress(nbatches * steps_per_save)
+    steps_per_save = GeneralizedGrossPitaevskii.resolve_fixed_timestepping(dt, tspan, 1)[2]
+    if show_progress
+        progress = Progress(steps_per_save * nbatches)
+    else
+        progress = nothing
+    end
 
     for batch ∈ 1:nbatches
         now() > max_datetime && break
@@ -101,7 +105,7 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
         end
         flush(io)
 
-        sol = map(GeneralizedGrossPitaevskii.solve(prob, solver, tspan; save_start=false, show_progress, progress, rng)[2]) do x
+        sol = map(GeneralizedGrossPitaevskii.solve(prob, solver, tspan; nsaves=1, dt, save_start=false, show_progress, progress, rng)[2]) do x
             dropdims(x, dims=3)
         end
 
@@ -124,7 +128,9 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
     end
 
     close(io)
-    finish!(progress)
+    if !isnothing(progress)
+        finish!(progress)
+    end
 
     first_order_r, second_order_r, first_order_k, second_order_k, n_ave
 end

@@ -5,7 +5,7 @@ include("../polariton_funcs.jl")
 include("equations.jl")
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "test_simple_solver"
+group_name = "hamming"
 
 param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, kernel1, kernel2 = h5open(saving_path) do file
     group = file[group_name]
@@ -220,7 +220,7 @@ bracket2 = (k2_min, 0)
 corr_d2d2_star, corr_d2d2_star′ = correlate(param1, bracket1, param2, bracket2, 128, true)
 ##
 ks = range(; start=-π / param.δL, step=2π / (size(g2_k, 1) * param.δL), length=size(g2_k, 1))
-power = 3
+power = 4
 
 ticks = [0.0]
 ticklabels = [L"%$tick" for tick in ticks]
@@ -235,23 +235,23 @@ with_theme(theme_latexfonts()) do
     ax = Axis(fig[1, 1]; aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime", xticks=(ticks, ticklabels), yticks=(ticks, ticklabels))
     xlims!(ax, (-0.7, 1.3))
     ylims!(ax, (-0.7, 1.3))
-    hm = heatmap!(ax, ks, ks, (g2_k .- 1) * 10^power, colorrange=(-2, 2), colormap=:inferno)
+    hm = heatmap!(ax, ks, ks, (g2_k .- 1) * 10^power, colorrange=(-5, 5), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$power})")
     for line_func! in (hlines!, vlines!)
         for k in (k_up, k_down)
             line_func!(ax, k, color=:black, linestyle=:dash)
         end
     end
-    lines!(ax, corr_down_u1d2 .+ k_down, -corr_up_u1d2 .+ k_up, linewidth=4, color=(:green, 0.6), linestyle=:dash, label=L"u_{\text{out}}^* \leftrightarrow d2_{\text{out}}")
-    lines!(ax, corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=(:purple, 0.6), linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d1_{\text{out}}")
+    #lines!(ax, corr_down_u1d2 .+ k_down, -corr_up_u1d2 .+ k_up, linewidth=4, color=(:green, 0.6), linestyle=:dash, label=L"u_{\text{out}}^* \leftrightarrow d2_{\text{out}}")
+    #lines!(ax, corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=(:purple, 0.6), linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d1_{\text{out}}")
     #lines!(ax, corr_down_u1d1 .+ k_down, -corr_up_u1d1 .+ k_up, linewidth=4, color=(:blue, 0.6), linestyle=:dash, label=L"u_{\text{out}}^* \leftrightarrow d1_{\text{out}}")
-    lines!(ax, -corr_down_u1d2 .+ k_down, corr_up_u1d2 .+ k_up, linewidth=4, color=(:red, 0.6), linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d2_{\text{out}}^*")
-    lines!(ax, -corr_down_u1d2 .+ k_down, -corr_up_u1d2 .+ k_up, linewidth=4, color=(:orange, 0.6), linestyle=:dash, label=L"u_{\text{out}}^* \leftrightarrow d2_{\text{out}}^*")
+    #lines!(ax, -corr_down_u1d2 .+ k_down, corr_up_u1d2 .+ k_up, linewidth=4, color=(:red, 0.6), linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d2_{\text{out}}^*")
+    #lines!(ax, -corr_down_u1d2 .+ k_down, -corr_up_u1d2 .+ k_up, linewidth=4, color=(:orange, 0.6), linestyle=:dash, label=L"u_{\text{out}}^* \leftrightarrow d2_{\text{out}}^*")
     #lines!(ax, corr_d1d2 .+ k_down, corr_d1d2′ .+ k_down, linewidth=4, color=:green, linestyle=:dash, label=L"d1_{\text{out}} \leftrightarrow d2_{\text{out}}")
     #lines!(ax, corr_d1_star_d2_star′ .+ k_down, corr_d1_star_d2_star .+ k_down, linewidth=4, color=:purple, linestyle=:dash, label=L"d1_{\text{out}}^* \leftrightarrow d2_{\text{out}}^*")
     #lines!(ax, corr_d2d2_star .+ k_down, corr_d2d2_star′ .+ k_down, linewidth=4, color=:orange, linestyle=:dash, label=L"d1_{\text{out}} \leftrightarrow d1_{\text{out}}^*")
     #scatter!(ax, k_up - 0.3, k_up + 0.15, color=:cyan, markersize=16, label = "?")
-    Legend(fig[1, 3], ax)
+    #Legend(fig[1, 3], ax)
 
     #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/g2_momentum_150.pdf", fig)
     fig

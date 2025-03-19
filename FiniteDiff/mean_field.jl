@@ -4,9 +4,9 @@ include("../io.jl")
 include("equations.jl")
 
 # Space parameters
-L = 1600.0f0
+L = 800.0f0
 lengths = (L,)
-N = 1024
+N = 2048
 δL = L / N
 rs = range(; start=-L / 2, step=δL, length=N)
 ks = range(; start=-π / δL, step=2π / L, length=N)
@@ -35,7 +35,7 @@ Amax = 12f0
 t_cycle = 600.0f0
 t_freeze = 582.0f0
 
-dt = 2.0f-1
+dt = 2.0f-2
 nsaves = 512
 
 # Full parameter tuple
@@ -45,10 +45,10 @@ param = (; δ₀, m, γ, ħ, L, g, V_damp, w_damp, V_def, w_def,
 u0 = (CUDA.zeros(ComplexF32, N),)
 prob = GrossPitaevskiiProblem(u0, lengths; dispersion, potential, nonlinearity, pump, param)
 tspan = (0, 1200.0f0)
-alg = StrangSplittingC()
+alg = ExpFiniteDiff()
 ts, sol = GeneralizedGrossPitaevskii.solve(prob, alg, tspan; dt, nsaves);
 steady_state = map(x -> x[:, end], sol)
-#heatmap(rs, ts, Array(abs2.(sol[1])))
+heatmap(rs, ts, Array(abs2.(sol[1])))
 ##
 n = Array(abs2.(steady_state[1]))
 n_up = n[N÷4]
