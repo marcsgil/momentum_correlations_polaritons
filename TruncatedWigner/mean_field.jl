@@ -22,33 +22,35 @@ g = 3f-4 / ħ
 V_damp = 1000.0f0
 w_damp = 30.0f0
 V_def = 0.85f0 / ħ
-w_def = 0.75f0
+w_def = 5f0
 
 # Pump parameters
 k_up = 0.25f0
 k_down = 0.55f0
 divide = -7
-factor = 0
+factor = 0.3
+
+ħ * k_up / m
 
 # Bistability cycle parameters
 Amax = 12f0
 t_cycle = 600.0f0
-t_freeze = 582.0f0
+t_freeze = 540.0f0
 
-dt = 2.0f-1
+dt = 2.0f-2
 nsaves = 512
 
 # Full parameter tuple
 param = (; δ₀, m, γ, ħ, L, g, V_damp, w_damp, V_def, w_def,
     Amax, t_cycle, t_freeze, δL, N, k_down, k_up, divide, factor, dt)
 
-u0 = (CUDA.zeros(ComplexF32, N),)
+u0 = (zeros(ComplexF32, N),)
 prob = GrossPitaevskiiProblem(u0, lengths; dispersion, potential, nonlinearity, pump, param)
 tspan = (0, 1200.0f0)
 alg = StrangSplittingC()
 ts, sol = GeneralizedGrossPitaevskii.solve(prob, alg, tspan; dt, nsaves);
 steady_state = map(x -> x[:, end], sol)
-#heatmap(rs, ts, Array(abs2.(sol[1])))
+heatmap(rs, ts, Array(abs2.(sol[1])))
 ##
 n = Array(abs2.(steady_state[1]))
 n_up = n[N÷4]
@@ -106,17 +108,20 @@ function get_correlation_buffers(steady_state)
     one_point, two_point
 end
 
-function create_save_group(_steady_state, saving_path, group_name, win_func1, param1, win_func2, param2)
+function create_save_group(_steady_state, saving_path, group_name, win_func1, param1, win_func2, param2, rs)
     steady_state = Array.(_steady_state)
 
+    support = rs[findall(r -> win_func1(0, r, param1) ≠ 0, rs)]
+    L_support = maximum(support) - minimum(support)
+    N_support = length(support)
+    δL_support = L_support / N_support
+    ks = range(; start=-π / δL_support, step=2π / L_support, length=N_support)
+
+    kernel1 = map(args -> cis(-prod(args)) * win_func1(args..., param1), Iterators.product(ks, rs))
+    kernel2 = map(args -> cis(-prod(args)) * win_func2(args..., param2), Iterators.product(ks, rs))
+
     one_point_r, two_point_r = get_correlation_buffers(steady_state)
-    one_point_k, two_point_k = get_correlation_buffers(steady_state)
-
-    kernel1 = similar(two_point_k)
-    kernel2 = similar(two_point_k)
-
-    GeneralizedGrossPitaevskii.grid_map!(kernel1, args -> cis(-prod(args)) * win_func1(args..., param1), (ks, rs))
-    GeneralizedGrossPitaevskii.grid_map!(kernel2, args -> cis(-prod(args)) * win_func2(args..., param2), (ks, rs))
+    one_point_k, two_point_k = get_correlation_buffers((complex(support), ))
 
     n_ave = 0
 
@@ -132,11 +137,12 @@ function create_save_group(_steady_state, saving_path, group_name, win_func1, pa
         group["n_ave"] = [n_ave]
         group["kernel1"] = kernel1
         group["kernel2"] = kernel2
+        group["ks"] = Vector(ks)
     end
 end
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "hamming"
+group_name = "hamming_corrected_k"
 
 win_func1(k, x, param) = exp(-(x - 150)^2 / 100^2)
 win_func2(k, x, param) = exp(-(x + 150)^2 / 100^2)
@@ -150,8 +156,14 @@ end
 param1 = (; x₀=265, width=550)
 param2 = (; x₀=-265, width=550)
 
+support = rs[findall(r -> hamming(0, r, param1) ≠ 0, rs)]
+L_support = maximum(support) - minimum(support)
+N_support = length(support)
+δL_support = L_support / N_support
+ks = range(; start=-π / δL_support, step=2π / L_support, length=N_support)
+
 #= h5open(saving_path, "cw") do file
     delete_object(file, group_name)
 end =#
 
-create_save_group(steady_state, saving_path, group_name, hamming, param1, hamming, param2)
+create_save_group(steady_state, saving_path, group_name, hamming, param1, hamming, param2, rs)

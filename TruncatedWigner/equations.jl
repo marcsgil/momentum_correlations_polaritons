@@ -58,7 +58,7 @@ function calculate_momentum_commutators(kernel1, kernel2, L)
         dest[a, b, m, n] = x
     end
 
-    dest = similar(kernel1, size(kernel1)..., 2, 2)
+    dest = similar(kernel1, size(kernel1, 1), size(kernel1, 1), 2, 2)
     backend = get_backend(dest)
     kernel!(backend)(dest, kernel1, kernel2, ndrange=size(dest))
 

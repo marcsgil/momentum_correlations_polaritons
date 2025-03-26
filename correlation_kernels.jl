@@ -83,10 +83,16 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
     prob = GrossPitaevskiiProblem(u0, lengths; noise_prototype, param, kwargs...)
     solver = StrangSplittingC()
 
-    buffer_first_order = similar(first_order_r)
-    buffer_second_order = similar(second_order_r)
-    ft_sol1 = similar.(u0)
-    ft_sol2 = similar.(u0)
+    buffer_first_order_r = similar(first_order_r)
+    buffer_second_order_r = similar(second_order_r)
+    buffer_first_order_k = similar(first_order_k)
+    buffer_second_order_k = similar(second_order_k)
+
+    tmp = second_order_k[:, begin]
+    ft_sol1 = map(steady_state) do x
+        stack(tmp for _ ∈ 1:batchsize)
+    end
+    ft_sol2 = similar.(ft_sol1)
 
     io = open(log_path, "w+")
     logger = SimpleLogger(io)
@@ -109,20 +115,20 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
             dropdims(x, dims=3)
         end
 
-        first_order_correlations!(buffer_first_order, sol, sol)
-        merge_averages!(first_order_r, n_ave, buffer_first_order, batchsize)
-        second_order_correlations!(buffer_second_order, sol, sol)
-        merge_averages!(second_order_r, n_ave, buffer_second_order, batchsize)
+        first_order_correlations!(buffer_first_order_r, sol, sol)
+        merge_averages!(first_order_r, n_ave, buffer_first_order_r, batchsize)
+        second_order_correlations!(buffer_second_order_r, sol, sol)
+        merge_averages!(second_order_r, n_ave, buffer_second_order_r, batchsize)
 
         for (dest1, dest2, k1, k2, src) ∈ zip(ft_sol1, ft_sol2, kernel1, kernel2, sol)
             mul!(dest1, k1, src)
             mul!(dest2, k2, src)
         end
 
-        first_order_correlations!(buffer_first_order, ft_sol1, ft_sol2)
-        merge_averages!(first_order_k, n_ave, buffer_first_order, batchsize)
-        second_order_correlations!(buffer_second_order, ft_sol1, ft_sol2)
-        merge_averages!(second_order_k, n_ave, buffer_second_order, batchsize)
+        first_order_correlations!(buffer_first_order_k, ft_sol1, ft_sol2)
+        merge_averages!(first_order_k, n_ave, buffer_first_order_k, batchsize)
+        second_order_correlations!(buffer_second_order_k, ft_sol1, ft_sol2)
+        merge_averages!(second_order_k, n_ave, buffer_second_order_k, batchsize)
 
         n_ave += batchsize
     end
