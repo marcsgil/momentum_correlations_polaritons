@@ -21,8 +21,20 @@ function A(t, Amax, t_cycle, t_freeze)
     val < 0 ? zero(val) : val
 end
 
+log_cosh(x) = abs(x) + log1p(exp(-2 * abs(x))) - log(2)
+
+function phase(x, width, k_up, k_down, divide)
+    k₋ = (k_down - k_up) / 2
+    k₊ = (k_down + k_up) / 2
+    k₋ * width * log_cosh((x - divide) / width) + k₊ * x
+end
+
+unitless_cycle(τ) = 4τ * (1 - τ)
+frozen_cycle(τ, target) = τ > (1 + sqrt(1 - target)) / 2 ? target : unitless_cycle(τ)
+smooth_step(x, factor) = (tanh(x) * (factor - 1) + (factor + 1)) / 2
+
 function pump(x, param, t)
-    a = A(t, param.Amax, param.t_cycle, param.t_freeze)
+    a = frozen_cycle(t / param.t_cycle, param.Atarget / param.Amax) * param.Amax
 
     if abs(x[1]) ≥ param.L * 0.85 / 2
         a *= 0
@@ -30,13 +42,16 @@ function pump(x, param, t)
         a *= 6
     end
 
-    if x[1] > param.divide
+    #= if x[1] > param.divide
         a *= param.factor
-    end
+    end =#
 
-    k = x[1] < param.divide ? param.k_up : param.k_down
+    #spatial_variation = (tanh((x[1] - param.divide) / param.w_pump) * (1 - param.factor) + (1 + param.factor)) / 2
 
-    a * cis(mapreduce(*, +, k, x))
+    #k = x[1] < param.divide ? param.k_up : param.k_down
+
+    #a * cis(mapreduce(*, +, k, x))
+    a * smooth_step((x[1] - param.divide) / param.w_pump, param.factor) * cis(phase(x[1], param.w_pump, param.k_up, param.k_down, param.divide))
 end
 
 noise_func(ψ, param) = √(param.γ / 2 / param.δL)
