@@ -70,7 +70,14 @@ function merge_averages!(dest, n_dest, new, n_new)
     @. dest = dest / (1 + n_new / n_dest) + new / (1 + n_dest / n_new)
 end
 
-function update_correlations!(first_order_r, second_order_r, first_order_k, second_order_k, n_ave, steady_state, kernel1, kernel2,
+function windowed_ft(dest, buffer, src, window, support, plan)
+    buffer .*= view(src, support, :) .* window
+    ifftshift!(dest, buffer)
+    mul!(buffer, plan, dest)
+    fftshift!(dest, buffer)
+end
+
+function update_correlations!(first_order_r, second_order_r, first_order_k, second_order_k, n_ave, steady_state, window1, window2, support1, support2,
     lengths, batchsize, nbatches, tspan, dt;
     show_progress=true, noise_eltype=eltype(first(steady_state)), log_path="log.txt", max_datetime=typemax(DateTime),
     rng=Random.default_rng(), kwargs...)
@@ -88,11 +95,19 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
     buffer_first_order_k = similar(first_order_k)
     buffer_second_order_k = similar(second_order_k)
 
-    tmp = second_order_k[:, begin]
     ft_sol1 = map(steady_state) do x
-        stack(tmp for _ ∈ 1:batchsize)
+        stack(x[support1] for _ ∈ 1:batchsize)
     end
-    ft_sol2 = similar.(ft_sol1)
+
+    ft_sol2 = map(steady_state) do x
+        stack(x[support1] for _ ∈ 1:batchsize)
+    end
+
+    buffer1 = similar.(ft_sol1)
+    buffer2 = similar.(ft_sol2)
+
+    plan1 = plan_fft(ft_sol1[1], 1)
+    plan2 = plan_fft(ft_sol2[1], 1)
 
     io = open(log_path, "w+")
     logger = SimpleLogger(io)
@@ -120,9 +135,9 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
         second_order_correlations!(buffer_second_order_r, sol, sol)
         merge_averages!(second_order_r, n_ave, buffer_second_order_r, batchsize)
 
-        for (dest1, dest2, k1, k2, src) ∈ zip(ft_sol1, ft_sol2, kernel1, kernel2, sol)
-            mul!(dest1, k1, src)
-            mul!(dest2, k2, src)
+        for (dest1, dest2, b1, b2, w1, w2, src) ∈ zip(ft_sol1, ft_sol2, buffer1, buffer2, window1, window2, sol)
+            windowed_ft(dest1, b1, src, w1, support1, plan1)
+            windowed_ft(dest2, b2, src, w2, support2, plan2)
         end
 
         first_order_correlations!(buffer_first_order_k, ft_sol1, ft_sol2)

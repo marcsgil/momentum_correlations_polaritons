@@ -4,11 +4,11 @@ include("equations.jl")
 include("../correlation_kernels.jl")
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "hamming_corrected_k"
+group_name = "hamming_corrected_k_cut"
 
 #reset_simulation!(saving_path, group_name)
 
-param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, n_ave, kernel1, kernel2 = h5open(saving_path) do file
+param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, n_ave, window1, window2, support1, support2 = h5open(saving_path) do file
     group = file[group_name]
 
     read_parameters(group),
@@ -19,18 +19,22 @@ param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_
     group["one_point_k"] |> read |> cu,
     group["two_point_k"] |> read |> cu,
     group["n_ave"][1],
-    (group["kernel1"] |> read |> cu,),
-    (group["kernel2"] |> read |> cu,)
+    (group["window1"] |> read |> cu,),
+    (group["window2"] |> read |> cu,),
+    group["support1"] |> read,
+    group["support2"] |> read
 end
+
+two_point_k
 ##
 tspan = (0.0f0, 50.0f0) .+ t_steady_state
 
 rng = CUDA.default_rng()
 
 one_point_r, two_point_r, one_point_k, two_point_k, n_ave = update_correlations!(
-    one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, kernel1, kernel2, (param.L,), 10^5, 10^5, tspan, param.dt;
-    dispersion, potential, nonlinearity, pump, param, noise_func, show_progress=false, rng,
-    max_datetime=DateTime(2025, 3, 27, 9, 0));
+    one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, window1, window2, support1, support2, (param.L,), 10^5, 1, tspan, param.dt;
+    dispersion, potential, nonlinearity, pump, param, noise_func, show_progress=true, rng,
+    max_datetime=DateTime(2025, 3, 28, 9, 0));
 
 h5open(saving_path, "cw") do file
     group = file[group_name]

@@ -43,7 +43,15 @@ noise_func(ψ, param) = √(param.γ / 2 / param.δL)
 
 choose(x1, x2, m) = isone(m) ? x1 : x2
 
-function calculate_momentum_commutators(kernel1, kernel2, L)
+function getindex_or_zero(x, idx)
+    if idx ∈ eahcindex(x)
+        x[idx]
+    else
+        zero(eltype(x))
+    end
+end
+
+function calculate_momentum_commutators(window1, window2, support1, support2, rs)
     @kernel function kernel!(dest, kernel1, kernel2)
         a, b, m, n = @index(Global, NTuple)
         idx1 = choose(a, b, m)
@@ -58,7 +66,19 @@ function calculate_momentum_commutators(kernel1, kernel2, L)
         dest[a, b, m, n] = x
     end
 
-    dest = similar(kernel1, size(kernel1, 1), size(kernel1, 1), 2, 2)
+    N1 = length(window1)
+    ks1 = range(; start=-π / δL, step=2π / (N1 * δL), length=N1)
+
+    N2 = length(window2)
+    ks2 = range(; start=-π / δL, step=2π / (N2 * δL), length=N2)
+
+    _window1
+
+    kernel1 = map(Iterators.product(eachindex(rs), ks1)) do (idx, k)
+        getindex_or_zero(window1, idx) * cis(- k * rs[idx])
+    end
+
+    dest = similar(kernel1, N1, N2, 2, 2)
     backend = get_backend(dest)
     kernel!(backend)(dest, kernel1, kernel2, ndrange=size(dest))
 
