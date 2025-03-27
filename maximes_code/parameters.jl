@@ -2,10 +2,9 @@ using CairoMakie, ProgressMeter, FFTW, LinearAlgebra, DSP
 
 #Values of fondamental parameters of system
 ħ = 0.6582 #meV.ps
-ω_lp_0 = 1473.36/ħ
-γ_lp = 0.047/ħ
-g_lp = 0.0003/ħ
-m_lp = ħ^2/(2*1.29)
+γ_lp = 0.047 / ħ
+g_lp = 0.0003 / ħ
+m_lp = ħ^2 / (2 * 1.29)
 
 # #Definition of time grid
 δt = 5e-2
@@ -18,10 +17,7 @@ n_x = 2048
 δx = x_final / n_x
 δk = 2 * π / x_final
 x_vector = LinRange(0, x_final - δx, n_x)
-relation_TWA_valid = γ_lp * δx / g_lp
 k_vector = fftshift(LinRange(-(n_x / 2 - 1) * δk, n_x / 2 * δk, n_x))
-
-ω_lp_vector = ω_lp_0 .+ ħ * k_vector .^ 2 / (2 * m_lp)
 
 #Definition of the potential reigning in the cavity
 high_absorbing = 4.5 / ħ
@@ -31,18 +27,24 @@ height_defect = -0.85 / ħ
 σ_defect = 0.69
 potential_lp = -1im * high_absorbing * exp.(-((x_vector .- x_final) .^ 2) / σ_absorbing^2) .+ height_defect * exp.(-((x_vector .- x_defect) .^ 2) / σ_defect^2)
 
+with_theme(theme_latexfonts()) do
+    fig = Figure()
+    ax = Axis(fig[1, 1], xlabel="x [μm]", ylabel="Potential [meV]", title="Potential in the cavity")
+    lines!(ax, x_vector .- x_defect, real(potential_lp), color=:blue)
+    fig
+end
 
 #Definition of the pump parameters
-ω_p = 1473.85 / ħ
+δ₀ = 0.49 / ħ
 k_p_u = 0.27
 k_p_d = 0.539#commented are values found by Malte in 2023
 
 #Effect on the polariton cavity
-effective_detuning_u = ħ * ω_p - ħ * (ω_lp_0 + ħ * k_p_u^2 / (2 * m_lp))
+effective_detuning_u = ħ * δ₀ - ħ^2 * k_p_u^2 / (2 * m_lp)
 c_sonic = sqrt(effective_detuning_u / m_lp)
 F_p_sonic = sqrt((((effective_detuning_u - m_lp * c_sonic^2) / ħ)^2 + (γ_lp / 2)^2) * m_lp * c_sonic^2 / (ħ * g_lp))
 
-effective_detuning_d = ħ * ω_p - ħ * (ω_lp_0 + ħ * k_p_d^2 / (2 * m_lp))
+effective_detuning_d = ħ * δ₀ - ħ^2 * k_p_d^2 / (2 * m_lp)
 c_sonic_d = sqrt(effective_detuning_d / m_lp)
 F_p_sonic_d = sqrt((((effective_detuning_d - m_lp * c_sonic_d^2) / ħ)^2 + (γ_lp / 2)^2) * m_lp * c_sonic_d^2 / (ħ * g_lp))
 
@@ -73,8 +75,8 @@ x_end_d = 745
 
 with_theme(theme_latexfonts()) do
     fig = Figure()
-    ax = Axis(fig[1,1], xlabel = "x [μm]", ylabel = "Pump Ep [a.u.]", title = "Pumping profile in the cavity")
-    lines!(ax, x_vector .- x_defect, abs.(E_p), color = :blue)
+    ax = Axis(fig[1, 1], xlabel="x [μm]", ylabel="Pump Ep [a.u.]", title="Pumping profile in the cavity")
+    lines!(ax, x_vector .- x_defect, abs.(E_p), color=:blue)
     fig
 end
 
@@ -85,8 +87,7 @@ matrix_ifft = plan_ifft(zeros(ComplexF64, n_x), flags=FFTW.ESTIMATE, timelimit=I
 matrix_fft2 = plan_fft(zeros(ComplexF64, (n_x, n_x)), flags=FFTW.ESTIMATE, timelimit=Inf)
 
 #Term of detuning and losses in GP equation
-losses_and_effective_detuning = exp.(-1im * δt * (ω_lp_vector .- ω_p .- 1im * γ_lp / 2))
-
+losses_and_effective_detuning = @. cis(-δt * (-im * γ_lp / 2 + ħ * k_vector^2 / 2m_lp - δ₀))
 
 #Function taking into account the pump and the fluctuations effects
 NoisePumpVector = -1im * δt * E_p

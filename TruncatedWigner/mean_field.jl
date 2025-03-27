@@ -1,7 +1,7 @@
-using GeneralizedGrossPitaevskii, CairoMakie, CUDA
+using GeneralizedGrossPitaevskii, CairoMakie
 include("../polariton_funcs.jl")
 include("../io.jl")
-include("equations.jl")
+include("equations_new.jl")
 
 # Space parameters
 L = 2000.0f0
@@ -19,39 +19,57 @@ g = 3f-4 / ħ
 δ₀ = 0.49f0 / ħ
 
 # Potential parameters
-V_damp = 1000.0f0
-w_damp = 30.0f0
+V_damp = 4.5 / ħ
+w_damp = 20.0f0
 V_def = -0.85f0 / ħ
-w_def = 0.75f0
+w_def = 0.69f0
 
 # Pump parameters
 k_up = 0.27f0
-k_down = 0.539f0 #sqrt(2m * δ₀ / ħ) * 0.8f0
+k_down = 0.539f0
 
-divide = -7
-w_pump = 5f0
+divide = -600 - 7
+#Effect on the polariton cavity
+effective_detuning_u = ħ * δ₀ - ħ^2 * k_up^2 / 2m
+c_sonic = sqrt(effective_detuning_u / m)
+F_p_sonic = sqrt((((effective_detuning_u - m * c_sonic^2) / ħ)^2 + (γ / 2)^2) * m * c_sonic^2 / (ħ * g))
 
-# Bistability cycle parameters
-Amax = 4f0
-#γ * sqrt((δ₀ - ħ * k_up^2) / g) / 2
-Atarget_up = #1.307f0 #γ * sqrt((δ₀ - ħ * k_up^2) / g) / 2
-Atarget_down = 0.8297f0
-factor = Atarget_down / Atarget_up
-t_cycle = 600.0f0
-#t_freeze = 570.0f0
+effective_detuning_d = ħ * δ₀ - ħ^2 * k_down^2 / (2 * m)
+c_sonic_d = sqrt(effective_detuning_d / m)
+F_p_sonic_d = sqrt((((effective_detuning_d - m * c_sonic_d^2) / ħ)^2 + (γ / 2)^2) * m * c_sonic_d^2 / (ħ * g))
+
+#Spatial properties
+F_p_support_u = F_p_sonic + 0.01  # intensity to support the upstream polariton where we want in the upper branch; in meV/ps
+F_p_support_d = F_p_sonic_d + 0.13# values found by Malte in 2023
+F_p_max = 9
+σ_sech = 40
 
 dt = 5.0f-2
 nsaves = 512
 
 # Full parameter tuple
-param = (; δ₀, m, γ, ħ, L, g, V_damp, w_damp, V_def, w_def,
-    Amax, t_cycle, Atarget = Atarget_up, δL, N, k_down, k_up, divide, factor, dt, w_pump)
+param = (;
+    L, N, δL, rs, ks, m, g, ħ, γ, δ₀,
+    V_damp, w_damp, V_def, w_def,
+    k_up, k_down,
+    F_p_max, F_p_support_u, F_p_support_d,
+    divide, σ_sech)
+##
+
+pump_vec = [pump((x,), param, 0) for x in rs]
+
+with_theme(theme_latexfonts()) do
+    fig = Figure()
+    ax = Axis(fig[1, 1], xlabel="x [μm]", ylabel="Pump Ep [a.u.]", title="Pumping profile in the cavity")
+    lines!(ax, rs, abs.(pump_vec), color=:blue)
+    fig
+end
 
 
-u0 = (CUDA.zeros(complex(typeof(L)), N),)
+u0 = (zeros(complex(typeof(L)), N),)
 prob = GrossPitaevskiiProblem(u0, lengths; dispersion, potential, nonlinearity, pump, param)
-tspan = (0f0, 1200.0f0)
-alg = StrangSplittingC()
+tspan = (0f0, 8000.0f0)
+alg = SimpleAlg()
 ts, sol = GeneralizedGrossPitaevskii.solve(prob, alg, tspan; dt, nsaves);
 steady_state = map(x -> x[:, end], sol)
 heatmap(rs, ts, Array(abs2.(sol[1])))
@@ -92,7 +110,7 @@ v_pred = sqrt(2ħ * δ₀ / m)
 with_theme(theme_latexfonts()) do
     fig = Figure(; fontsize=20)
     ax = Axis(fig[1, 1], xlabel=L"x")
-    xlims!(ax, -200, 200)
+    xlims!(ax, -800, -400)
     ylims!(ax, 0, 3)
     lines!(ax, rs, c, linewidth=4, color=:blue, label=L"c")
     lines!(ax, rs, v, linewidth=4, color=:red, label=L"v")
