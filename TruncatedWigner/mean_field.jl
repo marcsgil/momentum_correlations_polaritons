@@ -26,9 +26,10 @@ w_def = 0.69f0
 
 # Pump parameters
 k_up = 0.27f0
-k_down = 0.539f0
+k_down = 0.541f0
 
-divide = -600 - 7
+x_horizon = -L / 2 + 400
+divide = x_horizon - 7f0
 #Effect on the polariton cavity
 effective_detuning_u = ħ * δ₀ - ħ^2 * k_up^2 / 2m
 c_sonic = sqrt(effective_detuning_u / m)
@@ -53,59 +54,34 @@ param = (;
     V_damp, w_damp, V_def, w_def,
     k_up, k_down,
     F_p_max, F_p_support_u, F_p_support_d,
-    divide, σ_sech)
-##
-
-pump_vec = [pump((x,), param, 0) for x in rs]
-
-with_theme(theme_latexfonts()) do
-    fig = Figure()
-    ax = Axis(fig[1, 1], xlabel="x [μm]", ylabel="Pump Ep [a.u.]", title="Pumping profile in the cavity")
-    lines!(ax, rs, abs.(pump_vec), color=:blue)
-    fig
-end
+    divide, x_horizon, σ_sech)
 
 
 u0 = (zeros(complex(typeof(L)), N),)
 prob = GrossPitaevskiiProblem(u0, lengths; dispersion, potential, nonlinearity, pump, param)
-tspan = (0f0, 8000.0f0)
+tspan = (0f0, 4000.0f0)
 alg = SimpleAlg()
 ts, sol = GeneralizedGrossPitaevskii.solve(prob, alg, tspan; dt, nsaves);
 steady_state = map(x -> x[:, end], sol)
 heatmap(rs, ts, Array(abs2.(sol[1])))
 ##
 n = Array(abs2.(steady_state[1]))
-n_up = n[N÷4]
-n_down = n[3N÷4]
+
+n_up = n[argmin(abs.(rs .- x_horizon .+ 100))]
+n_down = n[argmin(abs.(rs .- x_horizon .- 200))]
 
 with_theme(theme_latexfonts()) do
     fig = Figure(; fontsize=20)
     ax = Axis(fig[1, 1], xlabel=L"x", ylabel=L"gn", xticks=(-800:200:800))
-    #xlims!(ax, -200, 200)
+    xlims!(ax, -200, 200)
     #ylims!(ax, -0.01, 0.75)
-    lines!(ax, rs, g * n, linewidth=4)
+    lines!(ax, rs .- x_horizon, g * n, linewidth=4)
     #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/densities.pdf", fig)
     fig
 end
 ##
-
-pump_vector = map(x -> pump((x,), param, t_cycle), rs)
-
-with_theme(theme_latexfonts()) do
-    fig = Figure(; fontsize=20)
-    ax = Axis(fig[1, 1], xlabel=L"x", ylabel=L"A")
-    lines!(ax, rs, abs.(pump_vector), linewidth=4)
-    #hlines!(ax, Atarget_up, color=:red)
-    #hlines!(ax, Atarget_down, color=:blue)
-    fig
-end
-
-
-##
 v = velocity(Array(steady_state[1]), ħ, m, δL)
 c = map((n, v) -> speed_of_sound(n, g, δ₀, m * v / ħ, ħ, m), n, v)
-
-v_pred = sqrt(2ħ * δ₀ / m)
 
 with_theme(theme_latexfonts()) do
     fig = Figure(; fontsize=20)
@@ -114,7 +90,6 @@ with_theme(theme_latexfonts()) do
     ylims!(ax, 0, 3)
     lines!(ax, rs, c, linewidth=4, color=:blue, label=L"c")
     lines!(ax, rs, v, linewidth=4, color=:red, label=L"v")
-    #hlines!(ax, v_pred)
     axislegend(; position=:lt)
     #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/velocities.pdf", fig)
     fig
@@ -131,8 +106,8 @@ with_theme(theme_latexfonts()) do
     ax = Axis(fig[1, 1]; xlabel="I", ylabel="n")
     lines!(ax, Is_up_theo, ns_up_theo, color=:blue, linewidth=4, label="Upstream")
     lines!(ax, Is_down_theo, ns_down_theo, color=:red, linewidth=4, label="Downstream")
-    scatter!(ax, abs2(Atarget), n_up, color=:black, markersize=16)
-    scatter!(ax, abs2(Atarget * factor), n_down, color=:black, markersize=16)
+    scatter!(ax, abs2(F_p_support_u), n_up, color=:black, markersize=16)
+    scatter!(ax, abs2(F_p_support_d), n_down, color=:black, markersize=16)
     axislegend()
     #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/bistability.pdf", fig)
     fig
@@ -178,7 +153,7 @@ function create_save_group(_steady_state, saving_path, group_name, win_func1, pa
 end
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "support_downstream_f64"
+group_name = "support_downstream"
 
 win_func1(k, x, param) = exp(-(x - 150)^2 / 100^2)
 win_func2(k, x, param) = exp(-(x + 150)^2 / 100^2)
