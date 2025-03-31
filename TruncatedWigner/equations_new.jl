@@ -4,20 +4,26 @@ function dispersion(ks, param)
     -im * param.γ / 2 + param.ħ * sum(abs2, ks) / 2param.m - param.δ₀
 end
 
+gaussian(x, center, width) = exp(-((x - center) / width)^2)
+
 function potential(rs, param)
-    param.V_def * exp(-(rs[1] - param.x_horizon)^2 / param.w_def^2) -
-    im * param.V_damp * exp(-(rs[1] - param.L / 2)^2 / param.w_damp^2)
+    param.V_def * gaussian(rs[1], param.x_def, param.w_def) -
+    im * param.V_damp * (gaussian(rs[1], param.L / 2, param.w_damp) +
+                         gaussian(rs[1], -param.L / 2, param.w_damp))
 end
 
-heaviside(x) = x > 0
+function half_pump(x, Fmax, Fmin, k, w, L)
+    ((Fmax - Fmin) * sech((x + L / 2) / w) + Fmin) * cis(k * x)
+end
+
+time_dependence(t, param) = (5 * exp(-t / 100) + 1)
 
 function pump(x, param, t)
-    (
-        (param.F_p_max - param.F_p_support_u) * sech((x[1] + param.L/2) / param.σ_sech) +
-        param.F_p_support_u .* heaviside(param.divide - x[1])
-    ) .* cis(param.k_up * x[1]) +
-    param.F_p_support_d * heaviside(x[1] - param.divide) *
-    cis(param.k_down * x[1])
+    if x[1] < param.divide
+        half_pump(x[1], param.F_max, param.F_up, param.k_up, param.w_pump, param.L) * time_dependence(t, param)
+    else
+        half_pump(-x[1], param.F_max, param.F_down, -param.k_down, param.w_pump, param.L) * time_dependence(t, param)
+    end
 end
 
 nonlinearity(ψ, param) = param.g * (abs2(first(ψ)) - 1 / param.δL)

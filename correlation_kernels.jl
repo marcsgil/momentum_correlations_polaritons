@@ -70,6 +70,12 @@ function merge_averages!(dest, n_dest, new, n_new)
     @. dest = dest / (1 + n_new / n_dest) + new / (1 + n_dest / n_new)
 end
 
+function windowed_ft!(dest, src, window_func, first_idx, plan)
+    N = length(window_func)
+    dest .= view(src, first_idx:first_idx + N - 1, :) .* window_func
+    plan * dest
+end
+
 function update_correlations!(first_order_r, second_order_r, first_order_k, second_order_k, n_ave, steady_state, kernel1, kernel2,
     lengths, batchsize, nbatches, tspan, dt;
     show_progress=true, noise_eltype=eltype(first(steady_state)), log_path="log.txt", max_datetime=typemax(DateTime),

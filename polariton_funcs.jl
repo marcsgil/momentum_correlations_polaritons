@@ -1,4 +1,4 @@
-using LinearAlgebra, Roots
+using LinearAlgebra, DSP
 
 detuning(δ₀, K, ħ, m) = δ₀ - ħ * K^2 / 2m
 
@@ -17,26 +17,9 @@ end
 function speed_of_sound(n, g, δ₀, K, ħ, m)
     δ = detuning(δ₀, K, ħ, m)
     gn = g * n
-    #2gn ≥ δ ? √(ħ * (2gn - δ) / m) : NaN
-    √(ħ * gn / m)
+    2gn ≥ δ ? √(ħ * (2gn - δ) / m) : NaN
 end
 
 function velocity(steady_state, ħ, m, δL)
-    ħ * mod2pi.(finite_difference_grad(angle.(steady_state))) / m / δL
-end
-
-function finite_difference_grad(N::Integer)
-    Tridiagonal(-ones(N - 1), ones(N), zeros(N - 1))
-end
-
-function finite_difference_grad(ψ)
-    finite_difference_grad(length(ψ)) * ψ
-end
-
-function finite_difference_lap(N::Integer)
-    Tridiagonal(ones(N - 1), -2ones(N), ones(N - 1))
-end
-
-function finite_difference_lap(ψ)
-    finite_difference_lap(length(ψ)) * ψ
+    ħ * diff(unwrap(angle.(steady_state))) / m / δL
 end
