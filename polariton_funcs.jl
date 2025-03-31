@@ -17,7 +17,8 @@ end
 function speed_of_sound(n, g, δ₀, K, ħ, m)
     δ = detuning(δ₀, K, ħ, m)
     gn = g * n
-    2gn ≥ δ ? √(ħ * (2gn - δ) / m) : NaN
+    #2gn ≥ δ ? √(ħ * (2gn - δ) / m) : NaN
+    √(ħ * gn / m)
 end
 
 function velocity(steady_state, ħ, m, δL)

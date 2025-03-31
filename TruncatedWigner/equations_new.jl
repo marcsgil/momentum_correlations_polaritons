@@ -5,7 +5,7 @@ function dispersion(ks, param)
 end
 
 function potential(rs, param)
-    param.V_def * exp(-(rs[1] - x_horizon)^2 / param.w_def^2) -
+    param.V_def * exp(-(rs[1] - param.x_horizon)^2 / param.w_def^2) -
     im * param.V_damp * exp(-(rs[1] - param.L / 2)^2 / param.w_damp^2)
 end
 

@@ -74,7 +74,7 @@ m_lp = ħ^2 / (2 * 1.29)
 
 # #Definition of time grid
 δt = 5e-2
-T_ss = 8000
+T_ss = 20000
 n_stationary = floor(T_ss / δt)
 
 #Definition of space grid
@@ -83,14 +83,14 @@ n_x = 2048
 δx = x_final / n_x
 δk = 2 * π / x_final
 x_vector = range(; start=0, step=δx, length=n_x)
-#k_vector = fftshift(LinRange(-(n_x / 2 - 1) * δk, n_x / 2 * δk, n_x))
-k_vector = fftfreq(n_x, 2π / δx)
+k_vector = fftshift(LinRange(-(n_x / 2 - 1) * δk, n_x / 2 * δk, n_x))
+#k_vector = fftfreq(n_x, 2π / δx)
 
 
 #Definition of the potential reigning in the cavity
 high_absorbing = 4.5 / ħ
 σ_absorbing = 20
-x_defect = 400
+x_defect = 1000
 height_defect = -0.85 / ħ
 σ_defect = 0.69
 
