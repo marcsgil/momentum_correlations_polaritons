@@ -76,7 +76,7 @@ function windowed_ft!(dest, src, window_func, first_idx, plan)
     plan * dest
 end
 
-function update_correlations!(first_order_r, second_order_r, first_order_k, second_order_k, n_ave, steady_state, kernel1, kernel2,
+function update_correlations!(first_order_r, second_order_r, first_order_k, second_order_k, n_ave, steady_state, window1, window2, first_idx1, first_idx2,
     lengths, batchsize, nbatches, tspan, dt;
     show_progress=true, noise_eltype=eltype(first(steady_state)), log_path="log.txt", max_datetime=typemax(DateTime),
     rng=Random.default_rng(), kwargs...)
@@ -94,11 +94,15 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
     buffer_first_order_k = similar(first_order_k)
     buffer_second_order_k = similar(second_order_k)
 
-    tmp = second_order_k[:, begin]
     ft_sol1 = map(steady_state) do x
-        stack(tmp for _ ∈ 1:batchsize)
+        stack(window1 for _ ∈ 1:batchsize)
     end
-    ft_sol2 = similar.(ft_sol1)
+    ft_sol2 = map(steady_state) do x
+        stack(window2 for _ ∈ 1:batchsize)
+    end
+
+    plan1 = plan_fft!(ft_sol1[1], 1)
+    plan2 = plan_fft!(ft_sol2[1], 1)
 
     io = open(log_path, "w+")
     logger = SimpleLogger(io)
@@ -126,9 +130,9 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
         second_order_correlations!(buffer_second_order_r, sol, sol)
         merge_averages!(second_order_r, n_ave, buffer_second_order_r, batchsize)
 
-        for (dest1, dest2, k1, k2, src) ∈ zip(ft_sol1, ft_sol2, kernel1, kernel2, sol)
-            mul!(dest1, k1, src)
-            mul!(dest2, k2, src)
+        for (dest1, dest2, src) ∈ zip(ft_sol1, ft_sol2, sol)
+            windowed_ft!(dest1, src, window1, first_idx1, plan1)
+            windowed_ft!(dest2, src, window2, first_idx2, plan2)
         end
 
         first_order_correlations!(buffer_first_order_k, ft_sol1, ft_sol2)

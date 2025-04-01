@@ -4,11 +4,11 @@ include("equations.jl")
 include("../correlation_kernels.jl")
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "support_downstream"
+group_name = "no_support_downstream"
 
 #reset_simulation!(saving_path, group_name)
 
-param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, n_ave, kernel1, kernel2 = h5open(saving_path) do file
+param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, n_ave, window1, window2, first_idx1, first_idx2 = h5open(saving_path) do file
     group = file[group_name]
 
     read_parameters(group),
@@ -19,8 +19,10 @@ param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_
     group["one_point_k"] |> read |> cu,
     group["two_point_k"] |> read |> cu,
     group["n_ave"][1],
-    (group["kernel1"] |> read |> cu,),
-    (group["kernel2"] |> read |> cu,)
+    group["window1"] |> read |> cu,
+    group["window2"] |> read |> cu,
+    group["first_idx1"] |> read,
+    group["first_idx2"] |> read
 end
 ##
 tspan = (0.0f0, 50.0f0) .+ t_steady_state
@@ -28,9 +30,9 @@ tspan = (0.0f0, 50.0f0) .+ t_steady_state
 rng = CUDA.default_rng()
 
 one_point_r, two_point_r, one_point_k, two_point_k, n_ave = update_correlations!(
-    one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, kernel1, kernel2, (param.L,), 10^5, 10^3, tspan, param.dt;
+    one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, window1, window2, first_idx1, first_idx2, (param.L,), 10^5, 10^5, tspan, param.dt;
     dispersion, potential, nonlinearity, pump, param, noise_func, show_progress=false, rng,
-    max_datetime=DateTime(2025, 4, 1, 11, 0));
+    max_datetime=DateTime(2025, 4, 2, 10, 0));
 
 h5open(saving_path, "cw") do file
     group = file[group_name]

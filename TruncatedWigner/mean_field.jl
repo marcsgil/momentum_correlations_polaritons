@@ -9,8 +9,6 @@ L = 2048.0f0
 lengths = (L,)
 N = 1024
 δL = L / N
-rs = range(; start=-L / 2, step=δL, length=N)
-ks = range(; start=-π / δL, step=2π / L, length=N)
 
 # Polariton parameters
 ħ = 0.6582f0 #meV.ps
@@ -23,12 +21,12 @@ g = 3f-4 / ħ
 V_damp = 4.5f0 / ħ
 w_damp = 20.0f0
 x_def = 0.0f0
-V_def = -0.85f0 / ħ
+V_def = 0.85f0 / ħ
 w_def = 0.75f0
 
 # Pump parameters
-k_up = 0.27f0
-k_down = 0.585f0
+k_up = 0.15f0
+k_down = 0.615f0
 
 divide = x_def - 7f0
 
@@ -39,7 +37,7 @@ F_sonic_up = γ * √(δ_up / g) / 2
 F_sonic_down = γ * √(δ_down / g) / 2
 
 F_up = F_sonic_up + 0.0f0
-F_down = F_sonic_down + 0.030
+F_down = F_sonic_down + 0.30f0
 F_max = 11f0
 
 w_pump = 30f0
@@ -63,35 +61,39 @@ alg = StrangSplittingC()
 ts, sol = GeneralizedGrossPitaevskii.solve(prob, alg, tspan; dt, nsaves);
 steady_state = sol[1][:, end]
 heatmap(rs, ts, Array(abs2.(sol[1])))
+plot_velocities(rs, steady_state, param; xlims=(-890, 890), ylims=(0, 3))
 ##
-plot_density(rs, steady_state, param;)
-plot_velocities(rs, steady_state, param; xlims=(-50, 50), ylims=(0, 5))
-plot_bistability(rs, steady_state, param, -150, 150)
+plot_density(rs, steady_state, param)
+plot_velocities(rs, steady_state, param; xlims=(-100, 100), ylims=(0, 3))
+plot_bistability(rs, steady_state, param, -300, 300)
 
-ks_up = LinRange(-1, 1, 512)
-ks_down = LinRange(-1.5, 1.5, 512)
-plot_dispersion(rs, steady_state, param, -150, 150, 0.4, ks_up, ks_down)
+ks_up = LinRange(-0.5, 0.5, 512)
+ks_down = LinRange(-1.3, 1.3, 512)
+plot_dispersion(rs, steady_state, param, -150, 150, 0.25, ks_up, ks_down)
 ##
-function get_correlation_buffers(steady_state)
-    two_point = zero(steady_state[1]) * zero(steady_state[1])'
+function get_correlation_buffers(prototype1, prototype2)
+    two_point = zero(prototype1) * zero(prototype2)'
     one_point = stack(two_point for a ∈ 1:2, b ∈ 1:2)
     one_point, two_point
 end
 
-function create_save_group(_steady_state, saving_path, group_name, win_func1, param1, win_func2, param2, rs, param)
+function create_save_group(_steady_state, saving_path, group_name, param, win_func, interval1, interval2)
     steady_state = Array.(_steady_state)
 
-    support = rs[findall(r -> win_func1(0, r, param1) ≠ 0, rs)]
-    L_support = maximum(support) - minimum(support)
-    N_support = length(support)
-    δL_support = L_support / N_support
-    ks = range(; start=-π / δL_support, step=2π / L_support, length=N_support)
 
-    kernel1 = map(args -> cis(-prod(args)) * win_func1(args..., param1), Iterators.product(ks, rs))
-    kernel2 = map(args -> cis(-prod(args)) * win_func2(args..., param2), Iterators.product(ks, rs))
+    δL = param.δL
+    N1 = round(Int, (last(interval1) - first(interval1)) / δL)
+    N2 = round(Int, (last(interval2) - first(interval2)) / δL)
+    T = eltype(first(steady_state))
 
-    one_point_r, two_point_r = get_correlation_buffers(steady_state)
-    one_point_k, two_point_k = get_correlation_buffers((complex(support),))
+    first_idx1 = argmin(idx -> abs(rs[idx] - first(interval1)), eachindex(rs))
+    first_idx2 = argmin(idx -> abs(rs[idx] - first(interval2)), eachindex(rs))
+
+    window1 = win_func.(0:N1-1, N1, T)
+    window2 = win_func.(0:N2-1, N2, T)
+
+    one_point_r, two_point_r = get_correlation_buffers(first(steady_state), first(steady_state))
+    one_point_k, two_point_k = get_correlation_buffers(window1, window2)
 
     n_ave = 0
 
@@ -105,30 +107,22 @@ function create_save_group(_steady_state, saving_path, group_name, win_func1, pa
         group["one_point_k"] = one_point_k
         group["two_point_k"] = two_point_k
         group["n_ave"] = [n_ave]
-        group["kernel1"] = kernel1
-        group["kernel2"] = kernel2
-        group["ks"] = Vector(ks)
+        group["window1"] = window1
+        group["window2"] = window2
+        group["first_idx1"] = first_idx1
+        group["first_idx2"] = first_idx2
     end
 end
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "support_downstream"
+group_name = "no_support_downstream"
 
-win_func1(k, x, param) = exp(-(x - 150)^2 / 100^2)
-win_func2(k, x, param) = exp(-(x + 150)^2 / 100^2)
-
-function hamming(k, x, param)
-    a0 = oftype(x, 0.54) * (abs(x - param.x₀) ≤ param.width / 2)
-    a1 = oftype(x, 0.46) * (abs(x - param.x₀) ≤ param.width / 2)
-    a0 + a1 * cospi(2 * (x - param.x₀) / param.width)
+function hamming(n, N, ::Type{T}) where {T}
+    T(0.54 - 0.46 * cospi(2 * n / N))
 end
-
-window_width = 500f0
-param1 = (; x₀=x_def + window_width / 2 - 10, width=window_width)
-param2 = (; x₀=x_def - window_width / 2 + 10, width=window_width)
 
 #= h5open(saving_path, "cw") do file
     delete_object(file, group_name)
 end =#
 
-create_save_group((steady_state, ), saving_path, group_name, hamming, param1, hamming, param2, rs, param)
+create_save_group((steady_state,), saving_path, group_name, param, hamming, (-10, 790), (-790, 10))

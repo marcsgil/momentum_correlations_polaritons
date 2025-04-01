@@ -5,9 +5,9 @@ include("../polariton_funcs.jl")
 include("equations.jl")
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "support_downstream"
+group_name = "no_support_downstream"
 
-param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, kernel1, kernel2 = h5open(saving_path) do file
+param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, window1, window2, first_idx1, first_idx2 = h5open(saving_path) do file
     group = file[group_name]
 
     n_ave = group["n_ave"][1]
@@ -21,15 +21,16 @@ param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_
     group["two_point_r"] |> read,
     group["one_point_k"] |> read,
     group["two_point_k"] |> read,
-    group["kernel1"] |> read,
-    group["kernel2"] |> read,
-    group["ks"] |> read
+    group["window1"] |> read,
+    group["window2"] |> read,
+    group["first_idx1"] |> read,
+    group["first_idx2"] |> read
 end
 
 commutators_r = calculate_position_commutators(one_point_r, param.δL)
-commutators_k = calculate_momentum_commutators(kernel1, kernel2, param.L)
+commutators_k = calculate_momentum_commutators(window1, window2, 500, 500, first_idx1, first_idx2)
 g2_r = calculate_g2(one_point_r, two_point_r, commutators_r)
-g2_k = calculate_g2(one_point_k, two_point_k, commutators_k)
+g2_k = fftshift(calculate_g2(one_point_k, two_point_k, commutators_k))
 
 
 N = param.N
@@ -50,13 +51,13 @@ n = Array(abs2.(steady_state))
 n_up = n[argmin(abs.(rs .- x_def .+ 100))]
 n_down = n[argmin(abs.(rs .- x_def .- 200))]
 
-power = 4
+power = 5
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(730, 600), fontsize=20)
     ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"x", ylabel=L"x\prime")
     xlims!(ax, (-100, 100) .+ param.x_def)
     ylims!(ax, (-100, 100) .+ param.x_def)
-    hm = heatmap!(ax, rs, rs, (g2_r .- 1) * 10^power, colorrange=(-1, 1), colormap=:inferno)
+    hm = heatmap!(ax, rs, rs, (g2_r .- 1) * 10^power, colorrange=(-5, 5), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$power})")
     #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/g2_postion.pdf", fig)
     fig
@@ -147,7 +148,12 @@ bracket2 = (k2_min, 0)
 
 corr_d2d2_star, corr_d2d2_star′ = correlate(param1, bracket1, param2, bracket2, 128, true)
 ##
-ks = range(; start=-π / param.δL, step=2π / (size(g2_k, 1) * param.δL), length=size(g2_k, 1))
+#ks = range(; start=-π / param.δL, step=2π / (size(g2_k, 1) * param.δL), length=size(g2_k, 1))
+ks1 = fftshift(fftfreq(length(window1), 2π / δL ))
+ks2 = fftshift(fftfreq(length(window2), 2π / δL ))
+
+δL * length(window1)
+
 power = 4
 
 xticks = [0.0, k_down]
@@ -156,12 +162,14 @@ yticks = [0.0, k_up]
 xticklabels = [L"0", L"k_{d}"]
 yticklabels = [L"0", L"k_{u}"]
 
+g2_k
+
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(900, 600), fontsize=20)
     ax = Axis(fig[1, 1]; aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime", xticks=(xticks, xticklabels), yticks=(yticks, yticklabels))
-    xlims!(ax, (-0.7, 1.3))
-    ylims!(ax, (-0.7, 1.3))
-    hm = heatmap!(ax, ks, ks, (g2_k .- 1) * 10^power, colorrange=(-3, 3), colormap=:inferno)
+    #xlims!(ax, (-0.9, 0.9) .+ k_down)
+    #ylims!(ax, (-0.9, 0.9) .+ k_up)
+    hm = heatmap!(ax, ks1, ks2, (g2_k .- 1) * 10^power, colorrange=(-3, 3), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$power})")
     #lines!(ax, corr_down_u1d2 .+ k_down, corr_up_u1d2 .+ k_up, linewidth=4, color=(:green, 0.6), linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d2_{\text{out}}")
     #lines!(ax, corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=(:purple, 0.6), linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d1_{\text{out}}")
