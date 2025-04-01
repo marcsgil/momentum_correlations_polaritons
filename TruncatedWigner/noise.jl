@@ -1,6 +1,6 @@
 using GeneralizedGrossPitaevskii, CUDA, Random
 include("../io.jl")
-include("equations_new.jl")
+include("equations.jl")
 include("../correlation_kernels.jl")
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
@@ -28,9 +28,9 @@ tspan = (0.0f0, 50.0f0) .+ t_steady_state
 rng = CUDA.default_rng()
 
 one_point_r, two_point_r, one_point_k, two_point_k, n_ave = update_correlations!(
-    one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, kernel1, kernel2, (param.L,), 10^5, 10^5, tspan, param.dt;
+    one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, kernel1, kernel2, (param.L,), 10^5, 10^3, tspan, param.dt;
     dispersion, potential, nonlinearity, pump, param, noise_func, show_progress=false, rng,
-    max_datetime=DateTime(2025, 3, 31, 9, 0));
+    max_datetime=DateTime(2025, 4, 1, 11, 0));
 
 h5open(saving_path, "cw") do file
     group = file[group_name]

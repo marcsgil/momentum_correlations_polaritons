@@ -4,55 +4,29 @@ function dispersion(ks, param)
     -im * param.γ / 2 + param.ħ * sum(abs2, ks) / 2param.m - param.δ₀
 end
 
-function damping_potential(x::NTuple{1}, xmin, xmax, width)
-    -im * exp(-(x[1] - xmin)^2 / width^2) + exp(-(x[1] - xmax)^2 / width^2)
-end
+gaussian(x, center, width) = exp(-((x - center) / width)^2)
 
 function potential(rs, param)
-    param.V_def * exp(-sum(abs2, rs) / param.w_def^2) +
-    param.V_damp * damping_potential(rs, -param.L / 2, param.L / 2, param.w_damp)
+    param.V_def * gaussian(rs[1], param.x_def, param.w_def) -
+    im * param.V_damp * (gaussian(rs[1], param.L / 2, param.w_damp) +
+                         gaussian(rs[1], -param.L / 2, param.w_damp))
+end
+
+function half_pump(x, Fmax, Fmin, k, w, L)
+    ((Fmax - Fmin) * sech((x + L / 2) / w) + Fmin) * cis(k * x)
+end
+
+time_dependence(t, param) = (5 * exp(-t / 100) + 1)
+
+function pump(x, param, t)
+    if x[1] < param.divide
+        half_pump(x[1], param.F_max, param.F_up, param.k_up, param.w_pump, param.L) * time_dependence(t, param)
+    else
+        half_pump(-x[1], param.F_max, param.F_down, -param.k_down, param.w_pump, param.L) * time_dependence(t, param)
+    end
 end
 
 nonlinearity(ψ, param) = param.g * (abs2(first(ψ)) - 1 / param.δL)
-
-function A(t, Amax, t_cycle, t_freeze)
-    _t = ifelse(t > t_freeze, t_freeze, t)
-    val = Amax * _t * (t_cycle - _t) * 4 / t_cycle^2
-    val < 0 ? zero(val) : val
-end
-
-log_cosh(x) = abs(x) + log1p(exp(-2 * abs(x))) - log(2)
-
-function phase(x, width, k_up, k_down, divide)
-    k₋ = (k_down - k_up) / 2
-    k₊ = (k_down + k_up) / 2
-    k₋ * width * log_cosh((x - divide) / width) + k₊ * x
-end
-
-unitless_cycle(τ) = 4τ * (1 - τ)
-frozen_cycle(τ, target) = τ > (1 + sqrt(1 - target)) / 2 ? target : unitless_cycle(τ)
-smooth_step(x, factor) = (tanh(x) * (factor - 1) + (factor + 1)) / 2
-
-function pump(x, param, t)
-    a = frozen_cycle(t / param.t_cycle, param.Atarget / param.Amax) * param.Amax
-
-    if abs(x[1]) ≥ param.L * 0.85 / 2
-        a *= 0
-    elseif -param.L * 0.80 / 2 ≥ x[1] > -param.L * 0.85 / 2
-        a *= 6
-    end
-
-    #= if x[1] > param.divide
-        a *= param.factor
-    end =#
-
-    #spatial_variation = (tanh((x[1] - param.divide) / param.w_pump) * (1 - param.factor) + (1 + param.factor)) / 2
-
-    #k = x[1] < param.divide ? param.k_up : param.k_down
-
-    #a * cis(mapreduce(*, +, k, x))
-    a * smooth_step((x[1] - param.divide) / param.w_pump, param.factor) * cis(phase(x[1], param.w_pump, param.k_up, param.k_down, param.divide))
-end
 
 noise_func(ψ, param) = √(param.γ / 2 / param.δL)
 

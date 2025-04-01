@@ -43,56 +43,24 @@ g = param.g
 ħ = param.ħ
 k_up = param.k_up
 k_down = param.k_down
-x_horizon = param.x_horizon
+x_def = param.x_def
 
 n = Array(abs2.(steady_state))
 
-n_up = n[argmin(abs.(rs .- x_horizon .+ 100))]
-n_down = n[argmin(abs.(rs .- x_horizon .- 200))]
+n_up = n[argmin(abs.(rs .- x_def .+ 100))]
+n_down = n[argmin(abs.(rs .- x_def .- 200))]
 
-power = 5
+power = 4
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(730, 600), fontsize=20)
     ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"x", ylabel=L"x\prime")
-    xlims!(ax, (-100, 100) .+ param.x_horizon)
-    ylims!(ax, (-100, 100) .+ param.x_horizon)
-    hm = heatmap!(ax, rs, rs, (g2_r .- 1) * 10^power, colorrange=(-2, 2), colormap=:inferno)
+    xlims!(ax, (-100, 100) .+ param.x_def)
+    ylims!(ax, (-100, 100) .+ param.x_def)
+    hm = heatmap!(ax, rs, rs, (g2_r .- 1) * 10^power, colorrange=(-1, 1), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$power})")
     #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/g2_postion.pdf", fig)
     fig
 end
-##
-n = Array(abs2.(steady_state))
-
-n_up = n[argmin(abs.(rs .- x_horizon .+ 200))]
-n_down = n[argmin(abs.(rs .- x_horizon .- 200))]
-
-with_theme(theme_latexfonts()) do
-    fig = Figure(; fontsize=20)
-    ax = Axis(fig[1, 1], xlabel=L"x", ylabel=L"gn", xticks=(-800:200:800))
-    xlims!(ax, -500, 500)
-    #ylims!(ax, -0.01, 0.75)
-    lines!(ax, rs .- x_horizon, g * n, linewidth=4)
-    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/densities.pdf", fig)
-    fig
-end
-##
-v = velocity(Array(steady_state), ħ, m, δL)
-c = map((n, v) -> speed_of_sound(n, g, δ₀, m * v / ħ, ħ, m), n, v)
-
-with_theme(theme_latexfonts()) do
-    fig = Figure(; fontsize=20)
-    ax = Axis(fig[1, 1], xlabel=L"x")
-    xlims!(ax, -50, 50)
-    ylims!(ax, 0, 3)
-    lines!(ax, rs .- x_horizon, c, linewidth=4, color=:blue, label=L"c")
-    lines!(ax, rs .- x_horizon, v, linewidth=4, color=:red, label=L"v")
-    axislegend(; position=:lt)
-    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/velocities.pdf", fig)
-    fig
-end
-
-
 ##
 with_theme(theme_latexfonts()) do
     fig = Figure(; fontsize=20)
@@ -105,86 +73,9 @@ with_theme(theme_latexfonts()) do
     fig
 end
 ##
-ks1 = LinRange(-1, 1, 512)
-ks2 = LinRange(-1.5, 1.5, 512)
+param_up = (n_up, param.g, param.δ₀, param.k_up, param.ħ, param.m)
+param_down = (n_down, param.g, param.δ₀, param.k_down, param.ħ, param.m)
 
-param_up = (n_up, g, δ₀, k_up, ħ, m)
-ω₊_up = [dispersion_relation(k, param_up..., true) for k ∈ ks1]
-ω₋_up = [dispersion_relation(k, param_up..., false) for k ∈ ks1]
-
-param_down = (n_down, g, δ₀, k_down, ħ, m)
-ω₊_down = [dispersion_relation(k, param_down..., true) for k ∈ ks2]
-ω₋_down = [dispersion_relation(k, param_down..., false) for k ∈ ks2]
-
-Ω = 0.4
-k_up_out = find_zero(k -> dispersion_relation(k, param_up..., true) - Ω, (-1, 0))
-k_up_in = find_zero(k -> dispersion_relation(k, param_up..., true) - Ω, (0, 1))
-
-k_star_up_out = find_zero(k -> dispersion_relation(k, param_up..., false) + Ω, (0, 1))
-k_star_up_in = find_zero(k -> dispersion_relation(k, param_up..., false) + Ω, (-1, 0))
-
-k1_down_out = find_zero(k -> dispersion_relation(k, param_down..., true) - Ω, (0.01, 1))
-k1_down_in = find_zero(k -> dispersion_relation(k, param_down..., true) - Ω, (-2, -0.01))
-
-k2_star_down_out = find_zero(k -> dispersion_relation(k, param_down..., true) + Ω, (-0.6, -0.01))
-k2_star_down_in = find_zero(k -> dispersion_relation(k, param_down..., true) + Ω, (-2, -0.6))
-
-k2_down_out = find_zero(k -> dispersion_relation(k, param_down..., false) - Ω, (0, 0.6))
-k2_down_in = find_zero(k -> dispersion_relation(k, param_down..., false) - Ω, (0.6, 2))
-
-k1_star_down_out = find_zero(k -> dispersion_relation(k, param_down..., false) + Ω, (-0.6, 0))
-k1_star_down_in = find_zero(k -> dispersion_relation(k, param_down..., false) + Ω, (0.6, 2))
-
-
-with_theme(theme_latexfonts()) do
-    fig = Figure(fontsize=20, size=(800, 400))
-    ax1 = Axis(fig[1, 1]; xlabel=L"\delta k", ylabel=L"\delta \omega", title="Upstream")
-    ax2 = Axis(fig[1, 2]; xlabel=L"\delta k", title="Downstream")
-
-    hideydecorations!(ax2, grid=false)
-    ylims!(ax1, (-1, 1))
-    ylims!(ax2, (-1, 1))
-
-    lines!(ax1, ks1, ω₊_up, linewidth=4)
-    lines!(ax1, ks1, ω₋_up, linewidth=4)
-    lines!(ax2, ks2, ω₊_down, linewidth=4)
-    lines!(ax2, ks2, ω₋_down, linewidth=4)
-
-    for ax ∈ (ax1, ax2)
-        hlines!(ax, [Ω, -Ω], linestyle=:dash, color=:black)
-    end
-
-    scatter!(ax1, k_up_out, Ω, color=:black, markersize=16)
-    text!(ax1, k_up_out, Ω, text=L"u_\text{out}", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
-    scatter!(ax1, k_up_in, Ω, color=:black, markersize=16)
-    text!(ax1, k_up_in, Ω, text=L"u_\text{in}", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
-    scatter!(ax1, k_star_up_out, -Ω, color=:black, markersize=16)
-    text!(ax1, k_star_up_out, -Ω, text=L"u_\text{out}^*", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
-    scatter!(ax1, k_star_up_in, -Ω, color=:black, markersize=16)
-    text!(ax1, k_star_up_in, -Ω, text=L"u_\text{in}^*", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
-
-    scatter!(ax2, k1_down_out, Ω, color=:red, markersize=16)
-    text!(ax2, k1_down_out, Ω, text=L"d1_\text{out}", fontsize=24, align=(:right, :bottom), offset=(-10, 0), color=:red)
-    scatter!(ax2, k1_down_in, Ω, color=:red, markersize=16)
-    text!(ax2, k1_down_in, Ω, text=L"d1_\text{in}", fontsize=24, align=(:left, :bottom), offset=(10, 0), color=:red)
-    scatter!(ax2, k2_star_down_out, -Ω, color=:red, markersize=16)
-    text!(ax2, k2_star_down_out, -Ω, text=L"d2_\text{out}^*", fontsize=24, align=(:right, :bottom), offset=(-5, 5), color=:red)
-    scatter!(ax2, k2_star_down_in, -Ω, color=:red, markersize=16)
-    text!(ax2, k2_star_down_in, -Ω, text=L"d2_\text{in}^*", fontsize=24, align=(:right, :top), offset=(-10, -5), color=:red)
-
-    scatter!(ax2, k2_down_out, Ω, color=:green, markersize=16)
-    text!(ax2, k2_down_out, Ω, text=L"d2_\text{out}", fontsize=24, align=(:left, :top), offset=(-5, -5), color=:green)
-    scatter!(ax2, k2_down_in, Ω, color=:green, markersize=16)
-    text!(ax2, k2_down_in, Ω, text=L"d2_\text{in}", fontsize=24, align=(:left, :bottom), offset=(10, 0), color=:green)
-    scatter!(ax2, k1_star_down_out, -Ω, color=:green, markersize=16)
-    text!(ax2, k1_star_down_out, -Ω, text=L"d1_\text{out}^*", fontsize=24, align=(:left, :top), offset=(5, -5), color=:green)
-    scatter!(ax2, k1_star_down_in, -Ω, color=:green, markersize=16)
-    text!(ax2, k1_star_down_in, -Ω, text=L"d1_\text{in}^*", fontsize=24, align=(:right, :top), offset=(-10, -5), color=:green)
-
-    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/dispersion_relation.pdf", fig)
-    fig
-end
-##
 #Hawking (u1 out, d2 out)
 param1 = (param_up..., true)
 param2 = (param_down..., false)
@@ -272,17 +163,17 @@ with_theme(theme_latexfonts()) do
     ylims!(ax, (-0.7, 1.3))
     hm = heatmap!(ax, ks, ks, (g2_k .- 1) * 10^power, colorrange=(-3, 3), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$power})")
-    lines!(ax, corr_down_u1d2 .+ k_down, corr_up_u1d2 .+ k_up, linewidth=4, color=(:green, 0.6), linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d2_{\text{out}}")
-    lines!(ax, corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=(:purple, 0.6), linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d1_{\text{out}}")
-    lines!(ax, -corr_down_u1d2 .+ k_down, corr_up_u1d2 .+ k_up, linewidth=4, color=(:red, 0.6), linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d2_{\text{out}}^*")
-    lines!(ax, -corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=(:orange, 0.6), linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d1_{\text{out}}^*")
+    #lines!(ax, corr_down_u1d2 .+ k_down, corr_up_u1d2 .+ k_up, linewidth=4, color=(:green, 0.6), linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d2_{\text{out}}")
+    #lines!(ax, corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=(:purple, 0.6), linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d1_{\text{out}}")
+    #lines!(ax, -corr_down_u1d2 .+ k_down, corr_up_u1d2 .+ k_up, linewidth=4, color=(:red, 0.6), linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d2_{\text{out}}^*")
+    #lines!(ax, -corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=(:orange, 0.6), linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d1_{\text{out}}^*")
 
 
     #lines!(ax, corr_d1d2 .+ k_down, corr_d1d2′ .+ k_down, linewidth=4, color=:green, linestyle=:dash, label=L"d1_{\text{out}} \leftrightarrow d2_{\text{out}}")
     #lines!(ax, corr_d1_star_d2_star′ .+ k_down, corr_d1_star_d2_star .+ k_down, linewidth=4, color=:purple, linestyle=:dash, label=L"d1_{\text{out}}^* \leftrightarrow d2_{\text{out}}^*")
     #lines!(ax, corr_d2d2_star .+ k_down, corr_d2d2_star′ .+ k_down, linewidth=4, color=:orange, linestyle=:dash, label=L"d1_{\text{out}} \leftrightarrow d1_{\text{out}}^*")
     #scatter!(ax, k_up - 0.3, k_up + 0.15, color=:cyan, markersize=16, label = "?")
-    Legend(fig[1, 3], ax)
+    #Legend(fig[1, 3], ax)
 
     #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/g2_momentum_150.pdf", fig)
     fig
@@ -297,18 +188,18 @@ J = 370:640
 
 heatmap((g2_k[J, J] .- 1) * 10^power, colorrange=(-2, 2), colormap=:inferno)
 
-heatmap(freq_freq[1:25], freq_freq[1:25], abs.(rfft(g2_k[J, J] .- 1) * 10^power)[1:25, 1:25], colormap =:inferno)
+heatmap(freq_freq[1:25], freq_freq[1:25], abs.(rfft(g2_k[J, J] .- 1) * 10^power)[1:25, 1:25], colormap=:inferno)
 
-with_theme(theme_latexfonts()) do 
+with_theme(theme_latexfonts()) do
     fig = Figure()
-    ax = Axis(fig[1,1])
+    ax = Axis(fig[1, 1])
     lines!(diag_part)
     fig
 end
 
-with_theme(theme_latexfonts()) do 
+with_theme(theme_latexfonts()) do
     fig = Figure()
-    ax = Axis(fig[1,1])
+    ax = Axis(fig[1, 1])
     xlims!(ax, (0, 50))
     lines!(ax, freq_freq, abs.(rfft(diag_part)))
     fig

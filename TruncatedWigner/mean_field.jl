@@ -1,7 +1,8 @@
 using GeneralizedGrossPitaevskii, CairoMakie, CUDA
 include("../polariton_funcs.jl")
 include("../io.jl")
-include("equations_new.jl")
+include("equations.jl")
+include("../plot_funcs.jl")
 
 # Space parameters
 L = 2048.0f0
@@ -63,66 +64,13 @@ ts, sol = GeneralizedGrossPitaevskii.solve(prob, alg, tspan; dt, nsaves);
 steady_state = sol[1][:, end]
 heatmap(rs, ts, Array(abs2.(sol[1])))
 ##
-function plot_density!(ax, rs, field, param; xlims=nothing, ylims=nothing)
-    n = Array(abs2.(field))
-    lines!(ax, rs, param.g * n, linewidth=4)
-    !isnothing(xlims) && xlims!(ax, xlims...)
-    !isnothing(ylims) && ylims!(ax, ylims...)
-end
-
-function plot_density(rs, field, param; xlims=nothing, ylims=nothing, fontsize=20, savepath=nothing)
-    with_theme(theme_latexfonts()) do
-        fig = Figure(; fontsize)
-        ax = Axis(fig[1, 1], xlabel=L"x", ylabel=L"gn")
-        plot_density!(ax, rs, field, param; xlims, ylims)
-        !isnothing(savepath) && save(savepath, fig)
-        fig
-    end
-end
-
 plot_density(rs, steady_state, param;)
-##
-
-function plot_velocities!(ax, rs, field, param; xlims=nothing, ylims=nothing)
-    v = velocity(Array(field), param.ħ, param.m, param.δL)
-    c = Array(@. sqrt(ħ * g * abs2(field) / m))
-
-    !isnothing(xlims) && xlims!(ax, xlims...)
-    !isnothing(ylims) && ylims!(ax, ylims...)
-    lines!(ax, rs, c, linewidth=4, color=:blue, label=L"c")
-    lines!(ax, rs[begin+1:end], v, linewidth=4, color=:red, label=L"v")
-    axislegend(; position=:lt)
-end
-
-function plot_velocities(rs, field, param; xlims=nothing, ylims=nothing, fontsize=20, savepath=nothing)
-    with_theme(theme_latexfonts()) do
-        fig = Figure(; fontsize)
-        ax = Axis(fig[1, 1], xlabel=L"x")
-        plot_velocities!(ax, rs, field, param; xlims, ylims)
-        fig
-    end
-end
-
 plot_velocities(rs, steady_state, param; xlims=(-50, 50), ylims=(0, 5))
-##
-ns_up_theo = LinRange(0, 1500, 512)
-Is_up_theo = eq_of_state.(ns_up_theo, g, δ₀, k_up, ħ, m, γ)
+plot_bistability(rs, steady_state, param, -150, 150)
 
-ns_down_theo = LinRange(0, 500, 512)
-Is_down_theo = eq_of_state.(ns_down_theo, g, δ₀, k_down, ħ, m, γ)
-
-with_theme(theme_latexfonts()) do
-    fig = Figure(fontsize=16)
-    ax = Axis(fig[1, 1]; xlabel="I", ylabel="n")
-    xlims!(ax, 0, 10)
-    lines!(ax, Is_up_theo, ns_up_theo, color=:blue, linewidth=4, label="Upstream")
-    lines!(ax, Is_down_theo, ns_down_theo, color=:red, linewidth=4, label="Downstream")
-    scatter!(ax, abs2(F_up), n_up, color=:black, markersize=16)
-    scatter!(ax, abs2(F_down), n_down, color=:black, markersize=16)
-    axislegend()
-    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/bistability.pdf", fig)
-    fig
-end
+ks_up = LinRange(-1, 1, 512)
+ks_down = LinRange(-1.5, 1.5, 512)
+plot_dispersion(rs, steady_state, param, -150, 150, 0.4, ks_up, ks_down)
 ##
 function get_correlation_buffers(steady_state)
     two_point = zero(steady_state[1]) * zero(steady_state[1])'
@@ -176,11 +124,11 @@ function hamming(k, x, param)
 end
 
 window_width = 500f0
-param1 = (; x₀=x_horizon + window_width / 2 - 10, width=window_width)
-param2 = (; x₀=x_horizon - window_width / 2 + 10, width=window_width)
+param1 = (; x₀=x_def + window_width / 2 - 10, width=window_width)
+param2 = (; x₀=x_def - window_width / 2 + 10, width=window_width)
 
 #= h5open(saving_path, "cw") do file
     delete_object(file, group_name)
 end =#
 
-create_save_group(steady_state, saving_path, group_name, hamming, param1, hamming, param2, rs, param)
+create_save_group((steady_state, ), saving_path, group_name, hamming, param1, hamming, param2, rs, param)
