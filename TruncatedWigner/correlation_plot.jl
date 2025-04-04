@@ -3,14 +3,17 @@ include("../tracing.jl")
 include("../io.jl")
 include("../polariton_funcs.jl")
 include("equations.jl")
+include("../plot_funcs.jl")
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "no_support_downstream"
+group_name = "test"
+
 
 param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, window1, window2, first_idx1, first_idx2 = h5open(saving_path) do file
     group = file[group_name]
 
     n_ave = group["n_ave"][1]
+    @show n_ave
     order_of_magnitude = round(Int, log10(n_ave))
     @info "Average after $(n_ave / 10^order_of_magnitude) × 10^$order_of_magnitude realizations"
 
@@ -27,16 +30,19 @@ param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_
     group["first_idx2"] |> read
 end
 
+n_ave
+
 commutators_r = calculate_position_commutators(one_point_r, param.δL)
-commutators_k = calculate_momentum_commutators(window1, window2, 500, 500, first_idx1, first_idx2)
+commutators_k = calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, param.δL)
+#commutators_k .= 0
+
 g2_r = calculate_g2(one_point_r, two_point_r, commutators_r)
 g2_k = fftshift(calculate_g2(one_point_k, two_point_k, commutators_k))
-
-
+##
 N = param.N
 L = param.L
 δL = param.δL
-rs = range(; start=-param.L / 2, step=param.δL, length=param.N)
+rs = StepRangeLen(0, δL, N) .- param.x_def
 
 m = param.m
 δ₀ = param.δ₀
@@ -48,27 +54,30 @@ x_def = param.x_def
 
 n = Array(abs2.(steady_state))
 
-n_up = n[argmin(abs.(rs .- x_def .+ 100))]
-n_down = n[argmin(abs.(rs .- x_def .- 200))]
+n_up = n[argmin(abs.(rs .+ 500))]
+n_down = n[argmin(abs.(rs .- 500))]
 
-power = 5
+pow = 5
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(730, 600), fontsize=20)
     ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"x", ylabel=L"x\prime")
-    xlims!(ax, (-100, 100) .+ param.x_def)
-    ylims!(ax, (-100, 100) .+ param.x_def)
-    hm = heatmap!(ax, rs, rs, (g2_r .- 1) * 10^power, colorrange=(-5, 5), colormap=:inferno)
-    Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$power})")
+    xlims!(ax, (-150, 150))
+    ylims!(ax, (-150, 150))
+    hm = heatmap!(ax, rs, rs, (g2_r .- 1) * 10^pow, colorrange=(-6, 6), colormap=:inferno)
+    Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$pow})")
     #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/g2_postion.pdf", fig)
     fig
 end
 ##
+plot_velocities(rs, steady_state, param, xlims=(-200, 200), ylims=(0, 2.6))
+plot_dispersion(rs, steady_state, param, -200, 200, 0.6, LinRange(-0.7, 0.7, 100), LinRange(-1.5, 1.5, 100))
+##
 with_theme(theme_latexfonts()) do
     fig = Figure(; fontsize=20)
-    ax = Axis(fig[1, 1], xlabel=L"x \ (\mu m)", xticks=-800:200:800)
+    ax = Axis(fig[1, 1], xlabel=L"x \ (\mu m)")
     lines!(ax, rs, g .* abs2.(steady_state), linewidth=4, label=L"gn")
-    lines!(ax, rs, abs.(kernel1)[1, :], linewidth=4, linestyle=:dash, label="Window 1 (a.u.)")
-    lines!(ax, rs, abs.(kernel2)[1, :], linewidth=4, linestyle=:dash, label="Window 2 (a.u.)")
+    lines!(ax, rs[first_idx1:first_idx1+length(window1)-1], abs.(window1), linewidth=4, linestyle=:dash, label="Window 1 (a.u.)")
+    lines!(ax, rs[first_idx2:first_idx2+length(window2)-1], abs.(window2), linewidth=4, linestyle=:dash, label="Window 2 (a.u.)")
     axislegend(ax)
     #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/windows_100.pdf", fig)
     fig
@@ -99,7 +108,7 @@ k_ext1, ω_ext1 = find_extrema(dispersion_relation, (-1, 1), param1...)
 
 k1_min = find_zero(k -> dispersion_relation(k, param1...) - ω_ext2, (-1, k_ext1))
 
-bracket1 = (-0.8, k_ext1)
+bracket1 = (-1, k_ext1)
 bracket2 = (0.01, 1)
 
 corr_up_u1d1, corr_down_u1d1 = correlate(param1, bracket1, param2, bracket2, 128, false)
@@ -149,33 +158,36 @@ bracket2 = (k2_min, 0)
 corr_d2d2_star, corr_d2d2_star′ = correlate(param1, bracket1, param2, bracket2, 128, true)
 ##
 #ks = range(; start=-π / param.δL, step=2π / (size(g2_k, 1) * param.δL), length=size(g2_k, 1))
-ks1 = fftshift(fftfreq(length(window1), 2π / δL ))
-ks2 = fftshift(fftfreq(length(window2), 2π / δL ))
+ks1 = fftshift(fftfreq(length(window1), 2π / δL))
+ks2 = fftshift(fftfreq(length(window2), 2π / δL))
 
 δL * length(window1)
 
-power = 4
+pow = 4
 
 xticks = [0.0, k_down]
 yticks = [0.0, k_up]
 
-xticklabels = [L"0", L"k_{d}"]
-yticklabels = [L"0", L"k_{u}"]
-
-g2_k
+_xticklabels = [L"0", L"k_{d}"]
+_yticklabels = [L"0", L"k_{u}"]
 
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(900, 600), fontsize=20)
-    ax = Axis(fig[1, 1]; aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime", xticks=(xticks, xticklabels), yticks=(yticks, yticklabels))
-    #xlims!(ax, (-0.9, 0.9) .+ k_down)
-    #ylims!(ax, (-0.9, 0.9) .+ k_up)
-    hm = heatmap!(ax, ks1, ks2, (g2_k .- 1) * 10^power, colorrange=(-3, 3), colormap=:inferno)
-    Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$power})")
-    #lines!(ax, corr_down_u1d2 .+ k_down, corr_up_u1d2 .+ k_up, linewidth=4, color=(:green, 0.6), linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d2_{\text{out}}")
-    #lines!(ax, corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=(:purple, 0.6), linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d1_{\text{out}}")
-    #lines!(ax, -corr_down_u1d2 .+ k_down, corr_up_u1d2 .+ k_up, linewidth=4, color=(:red, 0.6), linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d2_{\text{out}}^*")
-    #lines!(ax, -corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=(:orange, 0.6), linestyle=:dash, label=L"u_{\text{out}} \leftrightarrow d1_{\text{out}}^*")
+    ax = Axis(fig[1, 1]; aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime", xticks=(xticks, _xticklabels), yticks=(yticks, _yticklabels))
+    xlims!(ax, (-0.65, 0.65) .+ k_down)
+    ylims!(ax, (-0.65, 0.65) .+ k_up)
+    hm = heatmap!(ax, ks1, ks2, (g2_k .- 1) * 10^pow, colorrange=(-8, 8), colormap=:inferno)
+    Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$pow})")
 
+    #= lines!(ax, corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=(:black, 0.8), linestyle=(:dash, :loose), label=L"u_{\text{out}} \leftrightarrow d1_{\text{out}}")
+
+    lines!(ax, corr_down_u1d1 .+ k_down, -corr_up_u1d1 .+ k_up, linewidth=4, color=(:orange, 0.8), linestyle=(:dash, :loose), label=L"u_{\text{out}}^* \leftrightarrow d1_{\text{out}}")
+
+    lines!(ax, -corr_down_u1d2 .+ k_down, corr_up_u1d2 .+ k_up, linewidth=4, color=(:green, 0.8), linestyle=(:dash, :loose), label=L"u_{\text{out}} \leftrightarrow d2_{\text{out}}^*")
+    lines!(ax, -corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=(:brown, 0.8), linestyle=(:dash, :loose), label=L"u_{\text{out}} \leftrightarrow d1_{\text{out}}^*")
+
+    lines!(ax, -corr_down_u1d1 .+ k_down, -corr_up_u1d1 .+ k_up, linewidth=4, color=(:cyan, 0.8), linestyle=(:dash, :loose), label=L"u_{\text{out}}^* \leftrightarrow d1_{\text{out}}^*")
+    lines!(ax, -corr_down_u1d2 .+ k_down, -corr_up_u1d2 .+ k_up, linewidth=4, color=(:magenta, 0.8), linestyle=(:dash, :loose), label=L"u_{\text{out}}^* \leftrightarrow d1_{\text{out}}^*") =#
 
     #lines!(ax, corr_d1d2 .+ k_down, corr_d1d2′ .+ k_down, linewidth=4, color=:green, linestyle=:dash, label=L"d1_{\text{out}} \leftrightarrow d2_{\text{out}}")
     #lines!(ax, corr_d1_star_d2_star′ .+ k_down, corr_d1_star_d2_star .+ k_down, linewidth=4, color=:purple, linestyle=:dash, label=L"d1_{\text{out}}^* \leftrightarrow d2_{\text{out}}^*")

@@ -2,6 +2,29 @@ using KernelAbstractions, FFTW, Logging, Dates, LinearAlgebra, ProgressMeter
 
 choose(x1, x2, m) = isone(m) ? x1 : x2
 
+function kahan_step(x, c, next)
+    # Apply Kahan summation algorithm
+    y = next - c    # Corrected value (value to be added minus compensation)
+    t = x + y          # Raw sum (might lose low-order bits)
+    c = (t - x) - y    # Calculate new compensation term
+    x = t
+    x, c
+end
+
+@kernel function mean_prod_kernel!(dest, src1, src2, f1, f2)
+    j, k = @index(Global, NTuple)
+    x = zero(eltype(dest))
+    c = zero(eltype(dest))  # Compensation term for Kahan summation
+
+    for m ∈ axes(src1, 2)
+        # Calculate product for this element
+        next = f1(src1[j, m]) * f2(src2[k, m])
+        x, c = kahan_step(x, c, next)  # Apply Kahan summation
+    end
+
+    dest[j, k] = x / size(src1, 2)
+end
+
 function first_order_correlations!(dest, sol1::NTuple{1}, sol2::NTuple{1})
     @kernel function kernel!(dest, sol1, sol2)
         a, b, m, n = @index(Global, NTuple)
@@ -11,9 +34,11 @@ function first_order_correlations!(dest, sol1::NTuple{1}, sol2::NTuple{1})
         field2 = choose(sol1, sol2, n)
 
         x = zero(eltype(dest))
+        c = zero(eltype(dest))  # Compensation term for Kahan summation
         for r ∈ axes(sol1, 2)
-            x += field1[idx1, r] * conj(field2[idx2, r])
-        end
+            next = field1[idx1, r] * conj(field2[idx2, r])
+            x, c = kahan_step(x, c, next)  # Apply Kahan summation
+        end 
         dest[a, b, m, n] = x / size(sol1, 2)
     end
 
@@ -22,17 +47,7 @@ function first_order_correlations!(dest, sol1::NTuple{1}, sol2::NTuple{1})
 end
 
 function second_order_correlations!(dest, sol1::NTuple{1}, sol2::NTuple{1})
-    @kernel function kernel!(dest, sol1, sol2)
-        j, k = @index(Global, NTuple)
-        x = zero(eltype(dest))
-        for m ∈ axes(sol1, 2)
-            x += abs2(sol1[j, m]) * abs2(sol2[k, m])
-        end
-        dest[j, k] = x / size(sol1, 2)
-    end
-
-    backend = get_backend(dest)
-    kernel!(backend)(dest, sol1[1], sol2[1], ndrange=size(dest))
+    mean_prod_kernel!(get_backend(dest))(dest, sol1[1], sol2[1], abs2, abs2, ndrange=size(dest))
 end
 
 function first_order_correlations!(dest, sol1::NTuple{2}, sol2::NTuple{2})
@@ -72,14 +87,14 @@ end
 
 function windowed_ft!(dest, src, window_func, first_idx, plan)
     N = length(window_func)
-    dest .= view(src, first_idx:first_idx + N - 1, :) .* window_func
+    dest .= view(src, first_idx:first_idx+N-1, :) .* window_func
     plan * dest
 end
 
 function update_correlations!(first_order_r, second_order_r, first_order_k, second_order_k, n_ave, steady_state, window1, window2, first_idx1, first_idx2,
     lengths, batchsize, nbatches, tspan, dt;
     show_progress=true, noise_eltype=eltype(first(steady_state)), log_path="log.txt", max_datetime=typemax(DateTime),
-    rng=Random.default_rng(), kwargs...)
+    rng=nothing, kwargs...)
     u0 = map(steady_state) do x
         stack(x for _ ∈ 1:batchsize)
     end
@@ -87,7 +102,7 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
     noise_prototype = similar.(u0, noise_eltype)
 
     prob = GrossPitaevskiiProblem(u0, lengths; noise_prototype, param, kwargs...)
-    solver = StrangSplittingC()
+    solver = StrangSplitting()
 
     buffer_first_order_r = similar(first_order_r)
     buffer_second_order_r = similar(second_order_r)

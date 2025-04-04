@@ -48,7 +48,7 @@ function plot_bistability!(ax1, ax2, rs, steady_state, param, x_up, x_down)
 
     ns_up_theo = LinRange(0, 1.2 * δ_up / g, 512)
     Is_up_theo = eq_of_state.(ns_up_theo, param.g, param.δ₀, param.k_up, param.ħ, param.m, param.γ)
-    ns_down_theo = LinRange(0, 1.2 * δ_down / g, 512)
+    ns_down_theo = LinRange(0, 2 * δ_down / g, 512)
     Is_down_theo = eq_of_state.(ns_down_theo, param.g, param.δ₀, param.k_down, param.ħ, param.m, param.γ)
 
     lines!(ax1, Is_up_theo, ns_up_theo, color=:blue, linewidth=4)

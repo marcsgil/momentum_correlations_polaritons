@@ -9,6 +9,7 @@ L = 2048.0f0
 lengths = (L,)
 N = 1024
 δL = L / N
+rs = StepRangeLen(0, δL, N)
 
 # Polariton parameters
 ħ = 0.6582f0 #meV.ps
@@ -20,13 +21,13 @@ g = 3f-4 / ħ
 # Potential parameters
 V_damp = 4.5f0 / ħ
 w_damp = 20.0f0
-x_def = 0.0f0
+x_def = L / 2
 V_def = 0.85f0 / ħ
 w_def = 0.75f0
 
 # Pump parameters
 k_up = 0.15f0
-k_down = 0.615f0
+k_down = 0.61f0
 
 divide = x_def - 7f0
 
@@ -36,11 +37,14 @@ divide = x_def - 7f0
 F_sonic_up = γ * √(δ_up / g) / 2
 F_sonic_down = γ * √(δ_down / g) / 2
 
-F_up = F_sonic_up + 0.0f0
-F_down = F_sonic_down + 0.30f0
-F_max = 11f0
+F_up = F_sonic_up + 0.01f0
+F_down = F_sonic_down + 0.15f0
+F_max = 20f0
 
-w_pump = 30f0
+w_pump = 20f0
+
+decay_time = 100.0f0
+extra_intensity = 6.0f0
 
 dt = 2.0f-1
 nsaves = 512
@@ -50,26 +54,25 @@ param = (;
     L, N, δL, dt,
     m, g, ħ, γ, δ₀,
     V_damp, w_damp, V_def, w_def, x_def,
-    k_up, k_down, divide, F_up, F_down, F_max, w_pump
+    k_up, k_down, divide, F_up, F_down, F_max, w_pump, extra_intensity, decay_time
 )
-
 
 u0 = (CUDA.zeros(complex(typeof(L)), N),)
 prob = GrossPitaevskiiProblem(u0, lengths; dispersion, potential, nonlinearity, pump, param)
 tspan = (0f0, 1000.0f0)
-alg = StrangSplittingC()
+alg = StrangSplitting()
 ts, sol = GeneralizedGrossPitaevskii.solve(prob, alg, tspan; dt, nsaves);
 steady_state = sol[1][:, end]
-heatmap(rs, ts, Array(abs2.(sol[1])))
-plot_velocities(rs, steady_state, param; xlims=(-890, 890), ylims=(0, 3))
+heatmap(rs .- x_def, ts, Array(abs2.(sol[1])))
+plot_velocities(rs .- x_def, steady_state, param; xlims=(-900, 900), ylims=(0, 3))
 ##
 plot_density(rs, steady_state, param)
-plot_velocities(rs, steady_state, param; xlims=(-100, 100), ylims=(0, 3))
-plot_bistability(rs, steady_state, param, -300, 300)
+plot_velocities(rs .- x_def, steady_state, param; xlims=(-100, 100), ylims=(0, 3))
+plot_bistability(rs .- x_def, steady_state, param, -500, 500)
 
-ks_up = LinRange(-0.5, 0.5, 512)
-ks_down = LinRange(-1.3, 1.3, 512)
-plot_dispersion(rs, steady_state, param, -150, 150, 0.25, ks_up, ks_down)
+ks_up = LinRange(-1, 1, 512)
+ks_down = LinRange(-1.5, 1.5, 512)
+plot_dispersion(rs .- x_def, steady_state, param, -200, 200, 0.5, ks_up, ks_down)
 ##
 function get_correlation_buffers(prototype1, prototype2)
     two_point = zero(prototype1) * zero(prototype2)'
@@ -115,7 +118,7 @@ function create_save_group(_steady_state, saving_path, group_name, param, win_fu
 end
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "no_support_downstream"
+group_name = "test"
 
 function hamming(n, N, ::Type{T}) where {T}
     T(0.54 - 0.46 * cospi(2 * n / N))
@@ -125,4 +128,4 @@ end
     delete_object(file, group_name)
 end =#
 
-create_save_group((steady_state,), saving_path, group_name, param, hamming, (-10, 790), (-790, 10))
+create_save_group((steady_state,), saving_path, group_name, param, hamming, (-10, 790) .+ x_def, (-790, 10) .+ x_def)
