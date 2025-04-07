@@ -6,7 +6,7 @@ include("equations.jl")
 include("../plot_funcs.jl")
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "test"
+group_name = "test2"
 
 
 param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, window1, window2, first_idx1, first_idx2 = h5open(saving_path) do file
@@ -29,8 +29,6 @@ param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_
     group["first_idx1"] |> read,
     group["first_idx2"] |> read
 end
-
-n_ave
 
 commutators_r = calculate_position_commutators(one_point_r, param.δL)
 commutators_k = calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, param.δL)

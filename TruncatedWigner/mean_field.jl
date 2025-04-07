@@ -1,4 +1,4 @@
-using GeneralizedGrossPitaevskii, CairoMakie, CUDA
+using GeneralizedGrossPitaevskii, CairoMakie
 include("../polariton_funcs.jl")
 include("../io.jl")
 include("equations.jl")
@@ -74,58 +74,13 @@ ks_up = LinRange(-1, 1, 512)
 ks_down = LinRange(-1.5, 1.5, 512)
 plot_dispersion(rs .- x_def, steady_state, param, -200, 200, 0.5, ks_up, ks_down)
 ##
-function get_correlation_buffers(prototype1, prototype2)
-    two_point = zero(prototype1) * zero(prototype2)'
-    one_point = stack(two_point for a ∈ 1:2, b ∈ 1:2)
-    one_point, two_point
-end
 
-function create_save_group(_steady_state, saving_path, group_name, param, win_func, interval1, interval2)
-    steady_state = Array.(_steady_state)
-
-
-    δL = param.δL
-    N1 = round(Int, (last(interval1) - first(interval1)) / δL)
-    N2 = round(Int, (last(interval2) - first(interval2)) / δL)
-    T = eltype(first(steady_state))
-
-    first_idx1 = argmin(idx -> abs(rs[idx] - first(interval1)), eachindex(rs))
-    first_idx2 = argmin(idx -> abs(rs[idx] - first(interval2)), eachindex(rs))
-
-    window1 = win_func.(0:N1-1, N1, T)
-    window2 = win_func.(0:N2-1, N2, T)
-
-    one_point_r, two_point_r = get_correlation_buffers(first(steady_state), first(steady_state))
-    one_point_k, two_point_k = get_correlation_buffers(window1, window2)
-
-    n_ave = 0
-
-    h5open(saving_path, "cw") do file
-        group = create_group(file, group_name)
-        write_parameters!(group, param)
-        group["steady_state"] = stack(steady_state...)
-        group["t_steady_state"] = tspan[end]
-        group["one_point_r"] = one_point_r
-        group["two_point_r"] = two_point_r
-        group["one_point_k"] = one_point_k
-        group["two_point_k"] = two_point_k
-        group["n_ave"] = [n_ave]
-        group["window1"] = window1
-        group["window2"] = window2
-        group["first_idx1"] = first_idx1
-        group["first_idx2"] = first_idx2
-    end
-end
 
 saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "test"
-
-function hamming(n, N, ::Type{T}) where {T}
-    T(0.54 - 0.46 * cospi(2 * n / N))
-end
+group_name = "test2"
 
 #= h5open(saving_path, "cw") do file
     delete_object(file, group_name)
 end =#
 
-create_save_group((steady_state,), saving_path, group_name, param, hamming, (-10, 790) .+ x_def, (-790, 10) .+ x_def)
+save_mean_field(steady_state, saving_path, param, group_name, tspan)

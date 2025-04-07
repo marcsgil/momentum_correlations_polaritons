@@ -1,4 +1,4 @@
-using KernelAbstractions, FFTW, Logging, Dates, LinearAlgebra, ProgressMeter
+using KernelAbstractions, FFTW, Logging, Dates, LinearAlgebra, ProgressMeter, CUDA
 
 choose(x1, x2, m) = isone(m) ? x1 : x2
 
@@ -38,7 +38,7 @@ function first_order_correlations!(dest, sol1::NTuple{1}, sol2::NTuple{1})
         for r ∈ axes(sol1, 2)
             next = field1[idx1, r] * conj(field2[idx2, r])
             x, c = kahan_step(x, c, next)  # Apply Kahan summation
-        end 
+        end
         dest[a, b, m, n] = x / size(sol1, 2)
     end
 
@@ -91,6 +91,10 @@ function windowed_ft!(dest, src, window_func, first_idx, plan)
     plan * dest
 end
 
+function windowed_ft!(buffers::WindowedFTBuffers, src)
+    windowed_ft!(buffers.ft_buffer, src, buffers.window, buffers.first_idx, buffers.plan)
+end
+
 function update_correlations!(first_order_r, second_order_r, first_order_k, second_order_k, n_ave, steady_state, window1, window2, first_idx1, first_idx2,
     lengths, batchsize, nbatches, tspan, dt;
     show_progress=true, noise_eltype=eltype(first(steady_state)), log_path="log.txt", max_datetime=typemax(DateTime),
@@ -106,6 +110,7 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
 
     buffer_first_order_r = similar(first_order_r)
     buffer_second_order_r = similar(second_order_r)
+
     buffer_first_order_k = similar(first_order_k)
     buffer_second_order_k = similar(second_order_k)
 
@@ -164,4 +169,37 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
     end
 
     first_order_r, second_order_r, first_order_k, second_order_k, n_ave
+end
+
+function update_correlations!(saving_path, group_name, batchsize, nbatches, tspan; kwargs...)
+    param, steady_state, t_steady_state, one_point_r, two_point_r, n_ave, windows_up, windows_down = h5open(saving_path) do file
+        group = file[group_name]
+        num_windows = length(filter(contains("window_up"), keys(group)))
+        read_parameters(group),
+        (group["steady_state"] |> read |> cu,),
+        group["t_steady_state"] |> read,
+        group["one_point_r"] |> read |> cu,
+        group["two_point_r"] |> read |> cu,
+        group["n_ave"][1],
+        ntuple(n -> read_window(group, "window_up$n", cu), num_windows),
+        ntuple(n -> read_window(group, "window_up$n", cu), num_windows)
+    end
+
+    _tspan = tspan .+ t_steady_state
+
+    one_point_r, two_point_r, one_point_k, two_point_k, n_ave = update_correlations!(
+        one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, window1, window2, first_idx1, first_idx2, (param.L,),
+        batchsize, nbatches, _tspan, param.dt;
+        dispersion, potential, nonlinearity, pump, param, noise_func, kwargs...)
+
+    h5open(saving_path, "cw") do file
+        group = file[group_name]
+        group["one_point_r"][:, :, :, :] = Array(one_point_r)
+        group["two_point_r"][:, :] = Array(two_point_r)
+        group["one_point_k"][:, :, :, :] = Array(one_point_k)
+        group["two_point_k"][:, :] = Array(two_point_k)
+        group["n_ave"][:] = [n_ave]
+    end
+
+    nothing
 end
