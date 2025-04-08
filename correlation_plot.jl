@@ -1,11 +1,11 @@
 using CairoMakie, HDF5, FFTW
-include("../tracing.jl")
-include("../io.jl")
-include("../polariton_funcs.jl")
+include("tracing.jl")
+include("io.jl")
+include("polariton_funcs.jl")
 include("equations.jl")
-include("../plot_funcs.jl")
+include("plot_funcs.jl")
 
-saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
+saving_path = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations/correlations.h5"
 group_name = "test"
 
 
@@ -34,11 +34,10 @@ n_ave
 
 commutators_r = calculate_position_commutators(one_point_r, param.δL)
 commutators_k = calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, param.δL)
-#commutators_k .= 0
 
 g2_r = calculate_g2(one_point_r, two_point_r, commutators_r)
 g2_k = fftshift(calculate_g2(one_point_k, two_point_k, commutators_k))
-##
+
 N = param.N
 L = param.L
 δL = param.δL

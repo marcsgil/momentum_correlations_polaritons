@@ -1,8 +1,8 @@
-using GeneralizedGrossPitaevskii, CairoMakie, CUDA
-include("../polariton_funcs.jl")
-include("../io.jl")
+using GeneralizedGrossPitaevskii, CairoMakie
+include("polariton_funcs.jl")
+include("io.jl")
 include("equations.jl")
-include("../plot_funcs.jl")
+include("plot_funcs.jl")
 
 # Space parameters
 L = 2048.0f0
@@ -57,7 +57,7 @@ param = (;
     k_up, k_down, divide, F_up, F_down, F_max, w_pump, extra_intensity, decay_time
 )
 
-u0 = (CUDA.zeros(complex(typeof(L)), N),)
+u0 = (zeros(complex(typeof(L)), N),)
 prob = GrossPitaevskiiProblem(u0, lengths; dispersion, potential, nonlinearity, pump, param)
 tspan = (0f0, 1000.0f0)
 alg = StrangSplitting()
@@ -117,7 +117,7 @@ function create_save_group(_steady_state, saving_path, group_name, param, win_fu
     end
 end
 
-saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
+saving_path = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations/correlations.h5"
 group_name = "test"
 
 function hamming(n, N, ::Type{T}) where {T}
