@@ -81,8 +81,7 @@ function create_new_then_rename(file_path, new_content)
     nothing
 end
 
-function update_correlations!(first_order_r, second_order_r, first_order_k, second_order_k, n_ave, steady_state, window1, window2, first_idx1, first_idx2,
-    lengths, batchsize, nbatches, tspan, dt;
+function update_correlations!(first_order_r, second_order_r, first_order_k, second_order_k, n_ave, steady_state, param, window1, window2, first_idx1, first_idx2, batchsize, nbatches, tspan;
     show_progress=true, noise_eltype=eltype(first(steady_state)), log_path="log.txt", max_datetime=typemax(DateTime),
     rng=nothing, kwargs...)
     u0 = map(steady_state) do x
@@ -91,7 +90,7 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
 
     noise_prototype = similar.(u0, noise_eltype)
 
-    prob = GrossPitaevskiiProblem(u0, lengths; noise_prototype, param, kwargs...)
+    prob = GrossPitaevskiiProblem(u0, (param.L,); noise_prototype, param, kwargs...)
     solver = StrangSplitting()
 
     ft_sol1 = map(steady_state) do x
@@ -107,7 +106,7 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
     io = open(log_path, "w+")
     logger = SimpleLogger(io)
 
-    steps_per_save = GeneralizedGrossPitaevskii.resolve_fixed_timestepping(dt, tspan, 1)[2]
+    steps_per_save = GeneralizedGrossPitaevskii.resolve_fixed_timestepping(param.dt, tspan, 1)[2]
     if show_progress
         progress = Progress(steps_per_save * nbatches)
     else
@@ -121,7 +120,7 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
         end
         flush(io)
 
-        sol = map(GeneralizedGrossPitaevskii.solve(prob, solver, tspan; nsaves=1, dt, save_start=false, show_progress, progress, rng)[2]) do x
+        sol = map(GeneralizedGrossPitaevskii.solve(prob, solver, tspan; nsaves=1, param.dt, save_start=false, show_progress, progress, rng)[2]) do x
             dropdims(x, dims=3)
         end
 
@@ -145,4 +144,39 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
     end
 
     first_order_r, second_order_r, first_order_k, second_order_k, n_ave
+end
+
+function update_correlations!(saving_dir, batchsize, nbatches, t_sim; kwargs...)
+    saving_path = joinpath(saving_dir, "correlations.jld2")
+    @assert !isfile(joinpath(saving_dir, "previous_correlations.jld2")) "Previous averages file already exists. Please remove it before running the simulation."
+
+    param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, n_ave, window1, window2, first_idx1, first_idx2 = jldopen(joinpath(saving_dir, "correlations.jld2")) do file
+        file["param"],
+        file["steady_state"],
+        file["t_steady_state"],
+        file["one_point_r"],
+        file["two_point_r"],
+        file["one_point_k"],
+        file["two_point_k"],
+        file["n_ave"][1],
+        file["window1"],
+        file["window2"],
+        file["first_idx1"],
+        file["first_idx2"]
+    end
+
+    tspan = (t_steady_state, t_steady_state + t_sim)
+
+    one_point_r, two_point_r, one_point_k, two_point_k, n_ave = update_correlations!(
+        one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, param, window1, window2, first_idx1, first_idx2, batchsize, nbatches, tspan; param, kwargs...)
+
+    new_content = Dict(
+        "one_point_r" => one_point_r,
+        "two_point_r" => two_point_r,
+        "one_point_k" => one_point_k,
+        "two_point_k" => two_point_k,
+        "n_ave" => n_ave
+    )
+
+    create_new_then_rename(joinpath(saving_dir, "correlations.jld2"), new_content)
 end
