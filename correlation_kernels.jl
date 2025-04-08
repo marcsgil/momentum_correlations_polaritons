@@ -50,37 +50,6 @@ function second_order_correlations!(dest, sol1::NTuple{1}, sol2::NTuple{1})
     mean_prod_kernel!(get_backend(dest))(dest, sol1[1], sol2[1], abs2, abs2, ndrange=size(dest))
 end
 
-function first_order_correlations!(dest, sol1::NTuple{2}, sol2::NTuple{2})
-    @kernel function kernel!(dest, sol1, sol2)
-        a, b, m = @index(Global, NTuple)
-        idx = choose(a, b, m)
-        field = choose(sol1, sol2, m)
-
-        x = zero(eltype(dest))
-        for r ∈ axes(sol1[1], 2)
-            x += field[1][idx, r] * field[2][idx, r]
-        end
-        dest[a, b, m] = x / size(first(sol1), 2)
-    end
-
-    backend = get_backend(dest)
-    kernel!(backend)(dest, sol1, sol2, ndrange=size(dest))
-end
-
-function second_order_correlations!(dest, sol1::NTuple{2}, sol2::NTuple{2})
-    @kernel function kernel!(dest, sol1, sol2)
-        j, k = @index(Global, NTuple)
-        x = zero(eltype(dest))
-        for m ∈ axes(sol1[1], 2)
-            x += sol1[1][j, m] * sol1[2][j, m] * sol2[1][k, m] * sol2[2][k, m]
-        end
-        dest[j, k] = x / size(sol1[1], 2)
-    end
-
-    backend = get_backend(dest)
-    kernel!(backend)(dest, sol1, sol2, ndrange=size(dest))
-end
-
 function merge_averages!(dest, n_dest, new, n_new)
     @. dest = dest / (1 + n_new / n_dest) + new / (1 + n_dest / n_new)
 end
