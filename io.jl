@@ -1,36 +1,30 @@
-using HDF5
+using JLD2
 
-# Parameters
-
-function write_parameters!(parent, param)
-    for (key, value) in zip(keys(param), values(param))
-        attrs(parent)[string(key)] = value
-    end
+struct PositionCorrelations{T1,T2,T3}
+    first_order::T1
+    second_order::T2
+    commutators::T3
 end
 
-function read_parameters(parent)
-    ks = Symbol.(keys(attrs(parent)))
-    vals = values(attrs(parent))
-    (; (ks .=> vals)...)
+function get_correlation_buffers(prototype1::NTuple{1}, prototype2::NTuple{1})
+    second_order = zero(first(prototype1)) * zero(first(prototype2))'
+    first_order = stack(second_order for a ∈ 1:2, b ∈ 1:2)
+    first_order, second_order
 end
 
-function get_correlation_buffers(prototype1::Tuple{1}, prototype2::Tuple{1})
-    two_point = zero(first(prototype1)) * zero(first(prototype2))'
-    one_point = stack(two_point for a ∈ 1:2, b ∈ 1:2)
-    one_point, two_point
+function calculate_position_commutators(one_point::Array{T,4}, dx) where {T}
+    commutators = similar(one_point)
+    commutators[:, :, 1, 1] .= 1 / dx
+    commutators[:, :, 2, 2] .= 1 / dx
+    commutators[:, :, 1, 2] .= one(view(commutators, :, :, 1, 2)) ./ dx
+    commutators[:, :, 2, 1] .= commutators[:, :, 1, 2]
+    commutators
 end
 
-function save_mean_field(steady_state, saving_path, param, group_name, tspan)
-    first_order_r, second_order_r = get_correlation_buffers(steady_state, steady_state)
-    h5open(saving_path, "cw") do file
-        group = create_group(file, group_name)
-        write_parameters!(group, param)
-        group["steady_state"] = steady_state
-        group["t_steady_state"] = tspan[end]
-        group["first_order_r"] = first_order_r
-        group["second_order_r"] = second_order_r
-        group["n_ave"] = [0]
-    end
+function PositionCorrelations(prototype::NTuple{1}, dx)
+    first_order, second_order = get_correlation_buffers(prototype, prototype)
+    commutators = calculate_position_commutators(first_order, dx)
+    PositionCorrelations(first_order, second_order, commutators)
 end
 
 # Windows
@@ -71,7 +65,7 @@ function read_window(object, window_name, finalizer=identity)
     Window(finalizer(read(window)), first_idx)
 end
 
-struct WindowedFTBuffers{T1,T2,T3,T4,T5}
+#= struct WindowedFTBuffers{T1,T2,T3,T4,T5}
     window::T1
     buffer_first_order::T2
     buffer_second_order::T3
@@ -87,7 +81,7 @@ struct WindowedFTBuffers{T1,T2,T3,T4,T5}
         plan = plan_fft!(ft_buffer[1], 1)
         new(window, buffer_first_order, buffer_second_order, ft_buffer, plan)
     end
-end
+end =#
 
 function reset_simulation!(saving_path, group_name)
     h5open(saving_path, "cw") do file

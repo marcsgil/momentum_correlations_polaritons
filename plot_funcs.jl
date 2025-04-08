@@ -18,7 +18,7 @@ function plot_density(rs, field, param; xlims=nothing, ylims=nothing, fontsize=2
 end
 
 function plot_velocities!(ax, rs, field, param; xlims=nothing, ylims=nothing)
-    v = velocity(Array(field), param.ħ, param.m, param.δL)
+    v = velocity(Array(field), param.ħ, param.m, param.dx)
     c = Array(@. sqrt(ħ * g * abs2(field) / m))
 
     !isnothing(xlims) && xlims!(ax, xlims...)

@@ -1,15 +1,14 @@
 using GeneralizedGrossPitaevskii, CairoMakie
-include("../polariton_funcs.jl")
-include("../io.jl")
+include("polariton_funcs.jl")
 include("equations.jl")
-include("../plot_funcs.jl")
+include("plot_funcs.jl")
 
 # Space parameters
 L = 2048.0f0
 lengths = (L,)
 N = 1024
-δL = L / N
-rs = StepRangeLen(0, δL, N)
+dx = L / N
+rs = StepRangeLen(0, dx, N)
 
 # Polariton parameters
 ħ = 0.6582f0 #meV.ps
@@ -51,36 +50,36 @@ nsaves = 512
 
 # Full parameter tuple
 param = (;
-    L, N, δL, dt,
+    L, N, dx, dt,
     m, g, ħ, γ, δ₀,
     V_damp, w_damp, V_def, w_def, x_def,
     k_up, k_down, divide, F_up, F_down, F_max, w_pump, extra_intensity, decay_time
 )
 
-u0 = (CUDA.zeros(complex(typeof(L)), N),)
+u0 = (zeros(complex(typeof(L)), N),)
 prob = GrossPitaevskiiProblem(u0, lengths; dispersion, potential, nonlinearity, pump, param)
 tspan = (0f0, 1000.0f0)
 alg = StrangSplitting()
 ts, sol = GeneralizedGrossPitaevskii.solve(prob, alg, tspan; dt, nsaves);
-steady_state = sol[1][:, end]
+steady_state = map(x -> x[:, end], sol)
 heatmap(rs .- x_def, ts, Array(abs2.(sol[1])))
-plot_velocities(rs .- x_def, steady_state, param; xlims=(-900, 900), ylims=(0, 3))
+plot_velocities(rs .- x_def, steady_state[1], param; xlims=(-900, 900), ylims=(0, 3))
 ##
-plot_density(rs, steady_state, param)
-plot_velocities(rs .- x_def, steady_state, param; xlims=(-100, 100), ylims=(0, 3))
-plot_bistability(rs .- x_def, steady_state, param, -500, 500)
+plot_density(rs, steady_state[1], param)
+plot_velocities(rs .- x_def, steady_state[1], param; xlims=(-100, 100), ylims=(0, 3))
+plot_bistability(rs .- x_def, steady_state[1], param, -500, 500)
 
 ks_up = LinRange(-1, 1, 512)
 ks_down = LinRange(-1.5, 1.5, 512)
-plot_dispersion(rs .- x_def, steady_state, param, -200, 200, 0.5, ks_up, ks_down)
+plot_dispersion(rs .- x_def, steady_state[1], param, -200, 200, 0.5, ks_up, ks_down)
 ##
+using JLD2
 
+saving_dir = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations/SupportDownstreamRepulsive"
+path = joinpath(saving_dir, "steady_state.jld2")
 
-saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "test2"
-
-#= h5open(saving_path, "cw") do file
-    delete_object(file, group_name)
-end =#
-
-save_mean_field(steady_state, saving_path, param, group_name, tspan)
+jldopen(path, "a+") do file
+    file["steady_state"] = steady_state
+    file["param"] = param
+    file["t_steady_state"] = tspan[end]
+end

@@ -11,22 +11,26 @@ function kahan_step(x, c, next)
     x, c
 end
 
-@kernel function mean_prod_kernel!(dest, src1, src2, f1, f2)
-    j, k = @index(Global, NTuple)
-    x = zero(eltype(dest))
-    c = zero(eltype(dest))  # Compensation term for Kahan summation
-
-    for m ∈ axes(src1, 2)
-        # Calculate product for this element
-        next = f1(src1[j, m]) * f2(src2[k, m])
-        x, c = kahan_step(x, c, next)  # Apply Kahan summation
-    end
-
-    dest[j, k] = x / size(src1, 2)
+function merge_averages(μ1, n1, μ2, n2)
+    μ1 / (1 + n2 / n1) + μ2 / (1 + n1 / n2)
 end
 
-function first_order_correlations!(dest, sol1::NTuple{1}, sol2::NTuple{1})
-    @kernel function kernel!(dest, sol1, sol2)
+@kernel function mean_kernel!(dest, f, n_ave, fields::NTuple{N}) where {N}
+    J = @index(Global, NTuple)
+    x = zero(eltype(dest))
+    c = zero(eltype(dest))
+
+    for m ∈ axes(first(fields), 2)
+        next = f(ntuple(n -> fields[n][J[n], m], N))
+        x, c = kahan_step(x, c, next)
+    end
+
+    dest[J...] = merge_averages(dest[J...], n_ave, x, size(first(fields), 2))
+end
+
+
+function first_order_correlations!(dest, sol1::NTuple{1}, sol2::NTuple{1}, n_ave)
+    @kernel function kernel!(dest, sol1, sol2, n_ave)
         a, b, m, n = @index(Global, NTuple)
         idx1 = choose(a, b, m)
         idx2 = choose(a, b, n)
@@ -39,50 +43,15 @@ function first_order_correlations!(dest, sol1::NTuple{1}, sol2::NTuple{1})
             next = field1[idx1, r] * conj(field2[idx2, r])
             x, c = kahan_step(x, c, next)  # Apply Kahan summation
         end
-        dest[a, b, m, n] = x / size(sol1, 2)
+        dest[a, b, m, n] = merge_averages(dest[a, b, m, n], n_ave, x, size(sol1, 2))
     end
 
     backend = get_backend(dest)
-    kernel!(backend)(dest, sol1[1], sol2[1], ndrange=size(dest))
+    kernel!(backend)(dest, sol1[1], sol2[1], n_ave, ndrange=size(dest))
 end
 
-function second_order_correlations!(dest, sol1::NTuple{1}, sol2::NTuple{1})
-    mean_prod_kernel!(get_backend(dest))(dest, sol1[1], sol2[1], abs2, abs2, ndrange=size(dest))
-end
-
-function first_order_correlations!(dest, sol1::NTuple{2}, sol2::NTuple{2})
-    @kernel function kernel!(dest, sol1, sol2)
-        a, b, m = @index(Global, NTuple)
-        idx = choose(a, b, m)
-        field = choose(sol1, sol2, m)
-
-        x = zero(eltype(dest))
-        for r ∈ axes(sol1[1], 2)
-            x += field[1][idx, r] * field[2][idx, r]
-        end
-        dest[a, b, m] = x / size(first(sol1), 2)
-    end
-
-    backend = get_backend(dest)
-    kernel!(backend)(dest, sol1, sol2, ndrange=size(dest))
-end
-
-function second_order_correlations!(dest, sol1::NTuple{2}, sol2::NTuple{2})
-    @kernel function kernel!(dest, sol1, sol2)
-        j, k = @index(Global, NTuple)
-        x = zero(eltype(dest))
-        for m ∈ axes(sol1[1], 2)
-            x += sol1[1][j, m] * sol1[2][j, m] * sol2[1][k, m] * sol2[2][k, m]
-        end
-        dest[j, k] = x / size(sol1[1], 2)
-    end
-
-    backend = get_backend(dest)
-    kernel!(backend)(dest, sol1, sol2, ndrange=size(dest))
-end
-
-function merge_averages!(dest, n_dest, new, n_new)
-    @. dest = dest / (1 + n_new / n_dest) + new / (1 + n_dest / n_new)
+function second_order_correlations!(dest, sol1::NTuple{1}, sol2::NTuple{1}, n_ave)
+    mean_kernel!(get_backend(dest))(dest, fields -> abs2(fields[1]) * abs2(fields[2]), n_ave, (sol1[1], sol2[1]), ndrange=size(dest))
 end
 
 function windowed_ft!(dest, src, window_func, first_idx, plan)
@@ -91,43 +60,72 @@ function windowed_ft!(dest, src, window_func, first_idx, plan)
     plan * dest
 end
 
-function windowed_ft!(buffers::WindowedFTBuffers, src)
-    windowed_ft!(buffers.ft_buffer, src, buffers.window, buffers.first_idx, buffers.plan)
+function init_correlations(saving_dir, steady_state, dx, t_sim)
+    jldopen(joinpath(saving_dir, "averages.jld2"), "a+") do file
+        file["position_correlations"] = PositionCorrelations(steady_state, dx)
+        file["n_ave"] = 0
+        file["t_sim"] = t_sim
+    end
 end
 
-function update_correlations!(first_order_r, second_order_r, first_order_k, second_order_k, n_ave, steady_state, window1, window2, first_idx1, first_idx2,
-    lengths, batchsize, nbatches, tspan, dt;
-    show_progress=true, noise_eltype=eltype(first(steady_state)), log_path="log.txt", max_datetime=typemax(DateTime),
-    rng=nothing, kwargs...)
-    u0 = map(steady_state) do x
-        stack(x for _ ∈ 1:batchsize)
+function create_new_then_rename(file_path, new_content)
+    parent = dirname(file_path)
+    file_name = basename(file_path)
+    tmp = tempname(parent)
+
+    new_file = jldopen(tmp, "a+")
+    jldopen(file_path) do old_file
+        for key ∈ keys(old_file)
+            if haskey(new_content, key)
+                new_file[key] = new_content[key]
+            else
+                new_file[key] = old_file[key]
+            end
+        end
+    end
+    close(new_file)
+
+    mv(file_path, joinpath(parent, "previous_" * file_name))
+    mv(tmp, file_path)
+
+    nothing
+end
+
+function update_correlations!(saving_dir, batchsize, nbatches, t_sim;
+    noise_eltype=(),
+    rng=nothing,
+    max_datetime=typemax(DateTime),
+    show_progress=true,
+    log_path="log.txt",
+    kwargs...)
+
+    steady_state, param, t_steady_state = jldopen(joinpath(saving_dir, "steady_state.jld2")) do file
+        file["steady_state"], file["param"], file["t_steady_state"]
     end
 
-    noise_prototype = similar.(u0, noise_eltype)
+    saving_path = joinpath(saving_dir, "averages.jld2")
+    @assert !isfile(joinpath(saving_dir, "previous_averages.jld2")) "Previous averages file already exists. Please remove it before running the simulation."
 
-    prob = GrossPitaevskiiProblem(u0, lengths; noise_prototype, param, kwargs...)
+    if !isfile(saving_path)
+        init_correlations(saving_dir, steady_state, param.dx, t_sim)
+    end
+
+    position_correlations, n_ave, t_sim = jldopen(saving_path) do file
+        file["position_correlations"], file["n_ave"], file["t_sim"]
+    end
+
+    u0 = map(x -> stack(x for _ ∈ 1:batchsize), steady_state)
+    noise_prototype = map(x -> similar(x, noise_eltype...), steady_state)
+    @show eltype(first(noise_prototype))
+
+    prob = GrossPitaevskiiProblem(u0, (param.L,); noise_prototype, param, kwargs...)
     solver = StrangSplitting()
-
-    buffer_first_order_r = similar(first_order_r)
-    buffer_second_order_r = similar(second_order_r)
-
-    buffer_first_order_k = similar(first_order_k)
-    buffer_second_order_k = similar(second_order_k)
-
-    ft_sol1 = map(steady_state) do x
-        stack(window1 for _ ∈ 1:batchsize)
-    end
-    ft_sol2 = map(steady_state) do x
-        stack(window2 for _ ∈ 1:batchsize)
-    end
-
-    plan1 = plan_fft!(ft_sol1[1], 1)
-    plan2 = plan_fft!(ft_sol2[1], 1)
 
     io = open(log_path, "w+")
     logger = SimpleLogger(io)
 
-    steps_per_save = GeneralizedGrossPitaevskii.resolve_fixed_timestepping(dt, tspan, 1)[2]
+    tspan = (t_steady_state, t_steady_state + t_sim)
+    steps_per_save = GeneralizedGrossPitaevskii.resolve_fixed_timestepping(param.dt, tspan, 1)[2]
     if show_progress
         progress = Progress(steps_per_save * nbatches)
     else
@@ -141,64 +139,26 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
         end
         flush(io)
 
-        sol = map(GeneralizedGrossPitaevskii.solve(prob, solver, tspan; nsaves=1, dt, save_start=false, show_progress, progress, rng)[2]) do x
+        sol = map(GeneralizedGrossPitaevskii.solve(prob, solver, tspan; nsaves=1, dt=param.dt, save_start=false, show_progress, progress, rng)[2]) do x
             dropdims(x, dims=3)
         end
 
-        first_order_correlations!(buffer_first_order_r, sol, sol)
-        merge_averages!(first_order_r, n_ave, buffer_first_order_r, batchsize)
-        second_order_correlations!(buffer_second_order_r, sol, sol)
-        merge_averages!(second_order_r, n_ave, buffer_second_order_r, batchsize)
-
-        for (dest1, dest2, src) ∈ zip(ft_sol1, ft_sol2, sol)
-            windowed_ft!(dest1, src, window1, first_idx1, plan1)
-            windowed_ft!(dest2, src, window2, first_idx2, plan2)
-        end
-
-        first_order_correlations!(buffer_first_order_k, ft_sol1, ft_sol2)
-        merge_averages!(first_order_k, n_ave, buffer_first_order_k, batchsize)
-        second_order_correlations!(buffer_second_order_k, ft_sol1, ft_sol2)
-        merge_averages!(second_order_k, n_ave, buffer_second_order_k, batchsize)
+        first_order_correlations!(position_correlations.first_order, sol, sol, n_ave)
+        second_order_correlations!(position_correlations.second_order, sol, sol, n_ave)
 
         n_ave += batchsize
     end
 
+    new_content = Dict(
+        "position_correlations" => position_correlations,
+        "n_ave" => n_ave,
+    )
+
+    create_new_then_rename(saving_path, new_content)
+
     close(io)
     if !isnothing(progress)
         finish!(progress)
-    end
-
-    first_order_r, second_order_r, first_order_k, second_order_k, n_ave
-end
-
-function update_correlations!(saving_path, group_name, batchsize, nbatches, tspan; kwargs...)
-    param, steady_state, t_steady_state, one_point_r, two_point_r, n_ave, windows_up, windows_down = h5open(saving_path) do file
-        group = file[group_name]
-        num_windows = length(filter(contains("window_up"), keys(group)))
-        read_parameters(group),
-        (group["steady_state"] |> read |> cu,),
-        group["t_steady_state"] |> read,
-        group["one_point_r"] |> read |> cu,
-        group["two_point_r"] |> read |> cu,
-        group["n_ave"][1],
-        ntuple(n -> read_window(group, "window_up$n", cu), num_windows),
-        ntuple(n -> read_window(group, "window_up$n", cu), num_windows)
-    end
-
-    _tspan = tspan .+ t_steady_state
-
-    one_point_r, two_point_r, one_point_k, two_point_k, n_ave = update_correlations!(
-        one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, window1, window2, first_idx1, first_idx2, (param.L,),
-        batchsize, nbatches, _tspan, param.dt;
-        dispersion, potential, nonlinearity, pump, param, noise_func, kwargs...)
-
-    h5open(saving_path, "cw") do file
-        group = file[group_name]
-        group["one_point_r"][:, :, :, :] = Array(one_point_r)
-        group["two_point_r"][:, :] = Array(two_point_r)
-        group["one_point_k"][:, :, :, :] = Array(one_point_k)
-        group["two_point_k"][:, :] = Array(two_point_k)
-        group["n_ave"][:] = [n_ave]
     end
 
     nothing

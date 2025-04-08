@@ -1,62 +1,44 @@
-using CairoMakie, HDF5, FFTW
-include("../tracing.jl")
-include("../io.jl")
-include("../polariton_funcs.jl")
+using CairoMakie, JLD2, FFTW
+include("tracing.jl")
+include("io.jl")
+include("polariton_funcs.jl")
 include("equations.jl")
-include("../plot_funcs.jl")
+include("plot_funcs.jl")
 
-saving_path = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/TruncatedWigner/correlations.h5"
-group_name = "test2"
+saving_folder = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations/SupportDownstreamRepulsive"
 
-
-param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, window1, window2, first_idx1, first_idx2 = h5open(saving_path) do file
-    group = file[group_name]
-
-    n_ave = group["n_ave"][1]
-    @show n_ave
+position_correlations = jldopen(joinpath(saving_folder, "averages.jld2")) do file
+    n_ave = file["n_ave"]
     order_of_magnitude = round(Int, log10(n_ave))
-    @info "Average after $(n_ave / 10^order_of_magnitude) × 10^$order_of_magnitude realizations"
 
-    read_parameters(group),
-    group["steady_state"] |> read,
-    group["t_steady_state"] |> read,
-    group["one_point_r"] |> read,
-    group["two_point_r"] |> read,
-    group["one_point_k"] |> read,
-    group["two_point_k"] |> read,
-    group["window1"] |> read,
-    group["window2"] |> read,
-    group["first_idx1"] |> read,
-    group["first_idx2"] |> read
+    @info "Average after $(n_ave / 10^order_of_magnitude) × 10^$order_of_magnitude realizations"
+    file["position_correlations"]
 end
 
-commutators_r = calculate_position_commutators(one_point_r, param.δL)
-commutators_k = calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, param.δL)
-#commutators_k .= 0
+steady_state, param = jldopen(joinpath(saving_folder, "steady_state.jld2")) do file
+    file["steady_state"], file["param"]
+end
 
-g2_r = calculate_g2(one_point_r, two_point_r, commutators_r)
-g2_k = fftshift(calculate_g2(one_point_k, two_point_k, commutators_k))
+g2_r = calculate_g2(position_correlations)
+##
+heatmap(abs.(position_correlations.second_order[:, :]))
+heatmap(real.(position_correlations.first_order[:, :, 1, 1] .* position_correlations.first_order[:, :, 2, 2]))
+
+extrema(real.(position_correlations.first_order[:, :, 1, 1] .* position_correlations.first_order[:, :, 2, 2]))
+extrema(abs.(position_correlations.second_order[:, :]))
+
+lines(real.(position_correlations.first_order[:, 1, 1, 1]))
+
+position_correlations.commutators[:, :, 2, 2]
+
 ##
 N = param.N
 L = param.L
-δL = param.δL
-rs = StepRangeLen(0, δL, N) .- param.x_def
+dx = param.dx
+rs = StepRangeLen(0, dx, N) .- param.x_def
 
-m = param.m
-δ₀ = param.δ₀
-g = param.g
-ħ = param.ħ
-k_up = param.k_up
-k_down = param.k_down
-x_def = param.x_def
-
-n = Array(abs2.(steady_state))
-
-n_up = n[argmin(abs.(rs .+ 500))]
-n_down = n[argmin(abs.(rs .- 500))]
-
-pow = 5
 with_theme(theme_latexfonts()) do
+    pow = 5
     fig = Figure(; size=(730, 600), fontsize=20)
     ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"x", ylabel=L"x\prime")
     xlims!(ax, (-150, 150))
@@ -66,6 +48,23 @@ with_theme(theme_latexfonts()) do
     #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/g2_postion.pdf", fig)
     fig
 end
+##
+
+
+m = param.m
+δ₀ = param.δ₀
+g = param.g
+ħ = param.ħ
+k_up = param.k_up
+k_down = param.k_down
+x_def = param.x_def
+
+#n = Array(abs2.(steady_state[1]))
+
+n_up = n[argmin(abs.(rs .+ 500))]
+n_down = n[argmin(abs.(rs .- 500))]
+
+
 ##
 plot_velocities(rs, steady_state, param, xlims=(-200, 200), ylims=(0, 2.6))
 plot_dispersion(rs, steady_state, param, -200, 200, 0.6, LinRange(-0.7, 0.7, 100), LinRange(-1.5, 1.5, 100))
@@ -155,11 +154,11 @@ bracket2 = (k2_min, 0)
 
 corr_d2d2_star, corr_d2d2_star′ = correlate(param1, bracket1, param2, bracket2, 128, true)
 ##
-#ks = range(; start=-π / param.δL, step=2π / (size(g2_k, 1) * param.δL), length=size(g2_k, 1))
-ks1 = fftshift(fftfreq(length(window1), 2π / δL))
-ks2 = fftshift(fftfreq(length(window2), 2π / δL))
+#ks = range(; start=-π / param.dx, step=2π / (size(g2_k, 1) * param.dx), length=size(g2_k, 1))
+ks1 = fftshift(fftfreq(length(window1), 2π / dx))
+ks2 = fftshift(fftfreq(length(window2), 2π / dx))
 
-δL * length(window1)
+dx * length(window1)
 
 pow = 4
 
