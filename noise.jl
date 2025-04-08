@@ -24,11 +24,11 @@ param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_
     group["first_idx1"] |> read,
     group["first_idx2"] |> read
 end
-##
+
 tspan = (0.0f0, 50.0f0) .+ t_steady_state
 
 one_point_r, two_point_r, one_point_k, two_point_k, n_ave = update_correlations!(
-    one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, window1, window2, first_idx1, first_idx2, (param.L,), 10^3, 1, tspan, param.dt;
+    one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, window1, window2, first_idx1, first_idx2, (param.L,), 10^3, 10, tspan, param.dt;
     dispersion, potential, nonlinearity, pump, param, noise_func, show_progress=true,
     max_datetime=DateTime(2025, 4, 9, 10, 0));
 

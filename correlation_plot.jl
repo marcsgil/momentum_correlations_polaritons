@@ -13,7 +13,6 @@ param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_
     group = file[group_name]
 
     n_ave = group["n_ave"][1]
-    @show n_ave
     order_of_magnitude = round(Int, log10(n_ave))
     @info "Average after $(n_ave / 10^order_of_magnitude) × 10^$order_of_magnitude realizations"
 

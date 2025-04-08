@@ -11,7 +11,7 @@ function kahan_step(x, c, next)
     x, c
 end
 
-@kernel function mean_prod_kernel!(dest, src1, src2, f1, f2)
+@kernel function mean_prod_kernel!(dest, src1, src2, f1, f2, n_ave)
     j, k = @index(Global, NTuple)
     x = zero(eltype(dest))
     c = zero(eltype(dest))  # Compensation term for Kahan summation
@@ -22,11 +22,11 @@ end
         x, c = kahan_step(x, c, next)  # Apply Kahan summation
     end
 
-    dest[j, k] = x / size(src1, 2)
+    dest[j, k] = merge_averages(dest[j, k], n_ave, x, size(src1, 2))
 end
 
-function first_order_correlations!(dest, sol1::NTuple{1}, sol2::NTuple{1})
-    @kernel function kernel!(dest, sol1, sol2)
+function first_order_correlations!(dest, sol1::NTuple{1}, sol2::NTuple{1}, n_ave)
+    @kernel function kernel!(dest, sol1, sol2, n_ave)
         a, b, m, n = @index(Global, NTuple)
         idx1 = choose(a, b, m)
         idx2 = choose(a, b, n)
@@ -38,21 +38,19 @@ function first_order_correlations!(dest, sol1::NTuple{1}, sol2::NTuple{1})
         for r ∈ axes(sol1, 2)
             next = field1[idx1, r] * conj(field2[idx2, r])
             x, c = kahan_step(x, c, next)  # Apply Kahan summation
-        end 
-        dest[a, b, m, n] = x / size(sol1, 2)
+        end
+        dest[a, b, m, n] = merge_averages(dest[a, b, m, n], n_ave, x, size(sol1, 2))
     end
 
     backend = get_backend(dest)
-    kernel!(backend)(dest, sol1[1], sol2[1], ndrange=size(dest))
+    kernel!(backend)(dest, sol1[1], sol2[1], n_ave, ndrange=size(dest))
 end
 
-function second_order_correlations!(dest, sol1::NTuple{1}, sol2::NTuple{1})
-    mean_prod_kernel!(get_backend(dest))(dest, sol1[1], sol2[1], abs2, abs2, ndrange=size(dest))
+function second_order_correlations!(dest, sol1::NTuple{1}, sol2::NTuple{1}, n_ave)
+    mean_prod_kernel!(get_backend(dest))(dest, sol1[1], sol2[1], abs2, abs2, n_ave, ndrange=size(dest))
 end
 
-function merge_averages!(dest, n_dest, new, n_new)
-    @. dest = dest / (1 + n_new / n_dest) + new / (1 + n_dest / n_new)
-end
+merge_averages(μ, n, new_sum, new_n) = μ / (1 + new_n / n) + new_sum / (n + new_n)
 
 function windowed_ft!(dest, src, window_func, first_idx, plan)
     N = length(window_func)
@@ -72,11 +70,6 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
 
     prob = GrossPitaevskiiProblem(u0, lengths; noise_prototype, param, kwargs...)
     solver = StrangSplitting()
-
-    buffer_first_order_r = similar(first_order_r)
-    buffer_second_order_r = similar(second_order_r)
-    buffer_first_order_k = similar(first_order_k)
-    buffer_second_order_k = similar(second_order_k)
 
     ft_sol1 = map(steady_state) do x
         stack(window1 for _ ∈ 1:batchsize)
@@ -109,20 +102,16 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
             dropdims(x, dims=3)
         end
 
-        first_order_correlations!(buffer_first_order_r, sol, sol)
-        merge_averages!(first_order_r, n_ave, buffer_first_order_r, batchsize)
-        second_order_correlations!(buffer_second_order_r, sol, sol)
-        merge_averages!(second_order_r, n_ave, buffer_second_order_r, batchsize)
+        first_order_correlations!(first_order_r, sol, sol, n_ave)
+        second_order_correlations!(second_order_r, sol, sol, n_ave)
 
         for (dest1, dest2, src) ∈ zip(ft_sol1, ft_sol2, sol)
             windowed_ft!(dest1, src, window1, first_idx1, plan1)
             windowed_ft!(dest2, src, window2, first_idx2, plan2)
         end
 
-        first_order_correlations!(buffer_first_order_k, ft_sol1, ft_sol2)
-        merge_averages!(first_order_k, n_ave, buffer_first_order_k, batchsize)
-        second_order_correlations!(buffer_second_order_k, ft_sol1, ft_sol2)
-        merge_averages!(second_order_k, n_ave, buffer_second_order_k, batchsize)
+        first_order_correlations!(first_order_k, ft_sol1, ft_sol2, n_ave)
+        second_order_correlations!(second_order_k, ft_sol1, ft_sol2, n_ave)
 
         n_ave += batchsize
     end
