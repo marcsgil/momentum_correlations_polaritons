@@ -1,35 +1,31 @@
-using CairoMakie, HDF5, FFTW
+using CairoMakie, JLD2, FFTW
 include("tracing.jl")
 include("io.jl")
 include("polariton_funcs.jl")
 include("equations.jl")
 include("plot_funcs.jl")
 
-saving_path = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations/correlations.h5"
-group_name = "test"
+saving_dir = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations/SupportDownstreamRepulsive"
 
 
-param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, window1, window2, first_idx1, first_idx2 = h5open(saving_path) do file
-    group = file[group_name]
+param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, window1, window2, first_idx1, first_idx2 = jldopen(joinpath(saving_dir, "correlations.jld2")) do file
 
-    n_ave = group["n_ave"][1]
+    n_ave = file["n_ave"][1]
     order_of_magnitude = round(Int, log10(n_ave))
     @info "Average after $(n_ave / 10^order_of_magnitude) × 10^$order_of_magnitude realizations"
 
-    read_parameters(group),
-    group["steady_state"] |> read,
-    group["t_steady_state"] |> read,
-    group["one_point_r"] |> read,
-    group["two_point_r"] |> read,
-    group["one_point_k"] |> read,
-    group["two_point_k"] |> read,
-    group["window1"] |> read,
-    group["window2"] |> read,
-    group["first_idx1"] |> read,
-    group["first_idx2"] |> read
+    file["param"],
+    file["steady_state"],
+    file["t_steady_state"],
+    file["one_point_r"],
+    file["two_point_r"],
+    file["one_point_k"],
+    file["two_point_k"],
+    file["window1"],
+    file["window2"],
+    file["first_idx1"],
+    file["first_idx2"]
 end
-
-n_ave
 
 commutators_r = calculate_position_commutators(one_point_r, param.δL)
 commutators_k = calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, param.δL)
@@ -50,7 +46,7 @@ k_up = param.k_up
 k_down = param.k_down
 x_def = param.x_def
 
-n = Array(abs2.(steady_state))
+n = Array(abs2.(steady_state[1]))
 
 n_up = n[argmin(abs.(rs .+ 500))]
 n_down = n[argmin(abs.(rs .- 500))]

@@ -74,13 +74,15 @@ ks_up = LinRange(-1, 1, 512)
 ks_down = LinRange(-1.5, 1.5, 512)
 plot_dispersion(rs .- x_def, steady_state, param, -200, 200, 0.5, ks_up, ks_down)
 ##
+using JLD2
+
 function get_correlation_buffers(prototype1, prototype2)
     two_point = zero(prototype1) * zero(prototype2)'
     one_point = stack(two_point for a ∈ 1:2, b ∈ 1:2)
     one_point, two_point
 end
 
-function create_save_group(_steady_state, saving_path, group_name, param, win_func, interval1, interval2)
+function create_save_group(_steady_state, saving_dir, param, win_func, interval1, interval2)
     steady_state = Array.(_steady_state)
 
 
@@ -100,32 +102,26 @@ function create_save_group(_steady_state, saving_path, group_name, param, win_fu
 
     n_ave = 0
 
-    h5open(saving_path, "cw") do file
-        group = create_group(file, group_name)
-        write_parameters!(group, param)
-        group["steady_state"] = stack(steady_state...)
-        group["t_steady_state"] = tspan[end]
-        group["one_point_r"] = one_point_r
-        group["two_point_r"] = two_point_r
-        group["one_point_k"] = one_point_k
-        group["two_point_k"] = two_point_k
-        group["n_ave"] = [n_ave]
-        group["window1"] = window1
-        group["window2"] = window2
-        group["first_idx1"] = first_idx1
-        group["first_idx2"] = first_idx2
+    jldopen(joinpath(saving_dir, "correlations.jld2"), "a+") do file
+        file["steady_state"] = steady_state
+        file["param"] = param
+        file["t_steady_state"] = tspan[end]
+        file["one_point_r"] = one_point_r
+        file["two_point_r"] = two_point_r
+        file["one_point_k"] = one_point_k
+        file["two_point_k"] = two_point_k
+        file["n_ave"] = n_ave
+        file["window1"] = window1
+        file["window2"] = window2
+        file["first_idx1"] = first_idx1
+        file["first_idx2"] = first_idx2
     end
 end
 
-saving_path = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations/correlations.h5"
-group_name = "test"
+saving_dir = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations/SupportDownstreamRepulsive"
 
 function hamming(n, N, ::Type{T}) where {T}
     T(0.54 - 0.46 * cospi(2 * n / N))
 end
 
-#= h5open(saving_path, "cw") do file
-    delete_object(file, group_name)
-end =#
-
-create_save_group((steady_state,), saving_path, group_name, param, hamming, (-10, 790) .+ x_def, (-790, 10) .+ x_def)
+create_save_group((steady_state,), saving_dir, param, hamming, (-10, 790) .+ x_def, (-790, 10) .+ x_def)

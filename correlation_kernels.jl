@@ -58,6 +58,29 @@ function windowed_ft!(dest, src, window_func, first_idx, plan)
     plan * dest
 end
 
+function create_new_then_rename(file_path, new_content)
+    parent = dirname(file_path)
+    file_name = basename(file_path)
+    tmp = tempname(parent)
+
+    new_file = jldopen(tmp, "a+")
+    jldopen(file_path) do old_file
+        for key ∈ keys(old_file)
+            if haskey(new_content, key)
+                new_file[key] = new_content[key]
+            else
+                new_file[key] = old_file[key]
+            end
+        end
+    end
+    close(new_file)
+
+    mv(file_path, joinpath(parent, "previous_" * file_name))
+    mv(tmp, file_path)
+
+    nothing
+end
+
 function update_correlations!(first_order_r, second_order_r, first_order_k, second_order_k, n_ave, steady_state, window1, window2, first_idx1, first_idx2,
     lengths, batchsize, nbatches, tspan, dt;
     show_progress=true, noise_eltype=eltype(first(steady_state)), log_path="log.txt", max_datetime=typemax(DateTime),
