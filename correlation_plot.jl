@@ -13,20 +13,23 @@ steady_state, param, t_steady_state = jldopen(joinpath(saving_dir, "steady_state
     file["t_steady_state"]
 end
 
+window_idx = 2
+
 position_averages, momentum_averages = jldopen(joinpath(saving_dir, "averages.jld2")) do file
     n_ave = file["n_ave"][1]
     order_of_magnitude = round(Int, log10(n_ave))
     @info "Average after $(n_ave / 10^order_of_magnitude) × 10^$order_of_magnitude realizations"
 
     file["position_averages"],
-    file["momentum_averages_4"]
+    file["momentum_averages_$window_idx"]
 end
 
 window1, window2, first_idx1, first_idx2 = jldopen(joinpath(saving_dir, "windows.jld2")) do file
-    file["window_pair_4"].first.window,
-    file["window_pair_4"].second.window,
-    file["window_pair_4"].first.first_idx,
-    file["window_pair_4"].second.first_idx
+    pair = file["window_pair_$window_idx"]
+    pair.first.window,
+    pair.second.window,
+    pair.first.first_idx,
+    pair.second.first_idx
 end
 
 commutators_r = calculate_position_commutators(position_averages[1], param.dx)
@@ -153,13 +156,8 @@ bracket2 = (k2_min, 0)
 
 corr_d2d2_star, corr_d2d2_star′ = correlate(param1, bracket1, param2, bracket2, 128, true)
 ##
-#ks = range(; start=-π / param.dx, step=2π / (size(g2_k, 1) * param.dx), length=size(g2_k, 1))
 ks1 = fftshift(fftfreq(length(window1), 2π / dx))
 ks2 = fftshift(fftfreq(length(window2), 2π / dx))
-
-dx * length(window1)
-
-pow = 4
 
 xticks = [0.0, k_down]
 yticks = [0.0, k_up]
@@ -167,14 +165,13 @@ yticks = [0.0, k_up]
 _xticklabels = [L"0", L"k_{d}"]
 _yticklabels = [L"0", L"k_{u}"]
 
-g2_k
-
 with_theme(theme_latexfonts()) do
+    pow = 3
     fig = Figure(; size=(900, 600), fontsize=20)
     ax = Axis(fig[1, 1]; aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime", xticks=(xticks, _xticklabels), yticks=(yticks, _yticklabels))
-    xlims!(ax, (-0.65, 0.65) .+ k_down)
-    ylims!(ax, (-0.65, 0.65) .+ k_up)
-    hm = heatmap!(ax, ks1, ks2, (g2_k .- 1) * 10^pow, colorrange=(-8, 8), colormap=:inferno)
+    #xlims!(ax, (-0.65, 0.65) .+ k_down)
+    #ylims!(ax, (-0.65, 0.65) .+ k_up)
+    hm = heatmap!(ax, ks1, ks2, (g2_k .- 1) * 10^pow, colorrange=(-2, 2), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$pow})")
 
     #= lines!(ax, corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=(:black, 0.8), linestyle=(:dash, :loose), label=L"u_{\text{out}} \leftrightarrow d1_{\text{out}}")

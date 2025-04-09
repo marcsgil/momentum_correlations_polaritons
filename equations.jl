@@ -69,10 +69,8 @@ function calculate_momentum_commutators(window1, window2, first_idx1, first_idx2
     rs2 = (0:N2-1) * dx
     ks1 = fftfreq(N1, 2π / dx)
     ks2 = fftfreq(N2, 2π / dx)
-    #ks1 = (0:N1-1) * 2π / dx / N1
-    #ks2 = (0:N2-1) * 2π / dx / N1
 
-    dest = similar(window1, size(window1, 1), size(window2, 1), 2, 2)
+    dest = similar(complex(window1), size(window1, 1), size(window2, 1), 2, 2)
     backend = get_backend(dest)
     kernel!(backend)(dest, window1, window2, rs1, rs2, ks1, ks2, first_idx1, first_idx2, ndrange=size(dest))
 

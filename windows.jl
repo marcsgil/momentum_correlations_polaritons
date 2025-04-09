@@ -23,7 +23,13 @@ window1 = Window(10, 810, xs, hamming)
 window2 = Window(-810, -10, xs, hamming)
 save_window_pair(saving_dir, Pair(window1, window2))
 ##
-window1 = Window(-400, 400, xs, hamming)
-window2 = Window(-400, 400, xs, hamming)
+#window1 = Window(-800, 800, xs, hamming)
+#window2 = Window(-800, 800, xs, hamming)
+
+gauss = @. exp(-(xs / 300)^2)
+
+window1 = Window(gauss, 1)
+window2 = Window(gauss, 1)
+
 save_window_pair(saving_dir, Pair(window1, window2))
 ##
