@@ -10,7 +10,20 @@ param = jldopen(joinpath(saving_dir, "steady_state.jld2")) do file
     file["param"]
 end
 xs = StepRangeLen(0, param.dx, param.N) .- param.x_def
-
+##
 window1 = Window(-10, 790, xs, hamming)
 window2 = Window(-790, 10, xs, hamming)
 save_window_pair(saving_dir, Pair(window1, window2))
+##
+window1 = Window(0, 800, xs, hamming)
+window2 = Window(-800, 0, xs, hamming)
+save_window_pair(saving_dir, Pair(window1, window2))
+##
+window1 = Window(10, 810, xs, hamming)
+window2 = Window(-810, -10, xs, hamming)
+save_window_pair(saving_dir, Pair(window1, window2))
+##
+window1 = Window(-400, 400, xs, hamming)
+window2 = Window(-400, 400, xs, hamming)
+save_window_pair(saving_dir, Pair(window1, window2))
+##

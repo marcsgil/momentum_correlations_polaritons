@@ -13,34 +13,27 @@ steady_state, param, t_steady_state = jldopen(joinpath(saving_dir, "steady_state
     file["t_steady_state"]
 end
 
-first_order_x, second_order_x, first_order_k, second_order_k = jldopen(joinpath(saving_dir, "averages.jld2")) do file
-
+position_averages, momentum_averages = jldopen(joinpath(saving_dir, "averages.jld2")) do file
     n_ave = file["n_ave"][1]
     order_of_magnitude = round(Int, log10(n_ave))
     @info "Average after $(n_ave / 10^order_of_magnitude) × 10^$order_of_magnitude realizations"
 
-    file["first_order_x"],
-    file["second_order_x"],
-    file["first_order_k_1"],
-    file["second_order_k_1"]
+    file["position_averages"],
+    file["momentum_averages_4"]
 end
 
 window1, window2, first_idx1, first_idx2 = jldopen(joinpath(saving_dir, "windows.jld2")) do file
-    file["window_pair_1"].first.window,
-    file["window_pair_1"].second.window,
-    file["window_pair_1"].first.first_idx,
-    file["window_pair_1"].second.first_idx
+    file["window_pair_4"].first.window,
+    file["window_pair_4"].second.window,
+    file["window_pair_4"].first.first_idx,
+    file["window_pair_4"].second.first_idx
 end
 
-commutators_r = calculate_position_commutators(first_order_x, param.dx)
+commutators_r = calculate_position_commutators(position_averages[1], param.dx)
 commutators_k = calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, param.dx)
 
-second_order_k
-
-g2_r = calculate_g2(first_order_x, second_order_x, commutators_r)
-
-second_order_k
-g2_k = fftshift(calculate_g2(first_order_k, second_order_k, commutators_k))
+g2_r = calculate_g2(position_averages..., commutators_r)
+g2_k = fftshift(calculate_g2(momentum_averages..., commutators_k))
 
 N = param.N
 L = param.L

@@ -53,18 +53,41 @@ function second_order_correlations!(dest, sol1::NTuple{1}, sol2::NTuple{1}, n_av
     mean_prod_kernel!(backend)(dest, sol1[1], sol2[1], abs2, abs2, n_ave, ndrange=size(dest))
 end
 
+function update_averages!(averages, sol1, sol2, n_ave)
+    first_order_correlations!(averages[1], sol1, sol2, n_ave)
+    second_order_correlations!(averages[2], sol1, sol2, n_ave)
+end
+
 function windowed_ft!(dest, src, window_func, first_idx, plan)
     N = length(window_func)
     dest .= view(src, first_idx:first_idx+N-1, :) .* window_func
     plan * dest
 end
 
+function windowed_ft!(dest, src, window::Window, plan)
+    windowed_ft!(dest, src, window.window, window.first_idx, plan)
+end
+
+function get_ft_buffers(window_pair, batchsize, steady_state)
+    window1 = complex(window_pair.first.window)
+    window2 = complex(window_pair.second.window)
+
+    ft_sol1 = map(steady_state) do x
+        stack(window1 for _ ∈ 1:batchsize)
+    end
+    ft_sol2 = map(steady_state) do x
+        stack(window2 for _ ∈ 1:batchsize)
+    end
+
+    plan1 = plan_fft!(ft_sol1[1], 1)
+    plan2 = plan_fft!(ft_sol2[1], 1)
+
+    ft_sol1, ft_sol2, plan1, plan2
+end
+
 function update_correlations!(position_averages, momentum_averages, n_ave, steady_state, param, window_pairs, batchsize, nbatches, tspan;
     show_progress=true, noise_eltype=eltype(first(steady_state)), log_path="log.txt", max_datetime=typemax(DateTime),
     rng=nothing, kwargs...)
-
-    first_order_x, second_order_x = position_averages
-    first_order_k, second_order_k = momentum_averages
 
     u0 = map(steady_state) do x
         stack(x for _ ∈ 1:batchsize)
@@ -75,20 +98,7 @@ function update_correlations!(position_averages, momentum_averages, n_ave, stead
     prob = GrossPitaevskiiProblem(u0, (param.L,); noise_prototype, param, kwargs...)
     solver = StrangSplitting()
 
-    window1 = window_pairs[1].first.window
-    window2 = window_pairs[1].second.window
-    first_idx1 = window_pairs[1].first.first_idx
-    first_idx2 = window_pairs[1].second.first_idx
-
-    ft_sol1 = map(steady_state) do x
-        stack(complex(window1) for _ ∈ 1:batchsize)
-    end
-    ft_sol2 = map(steady_state) do x
-        stack(complex(window2) for _ ∈ 1:batchsize)
-    end
-
-    plan1 = plan_fft!(ft_sol1[1], 1)
-    plan2 = plan_fft!(ft_sol2[1], 1)
+    ft_buffers = [get_ft_buffers(pair, batchsize, steady_state) for pair ∈ window_pairs]
 
     io = open(log_path, "w+")
     logger = SimpleLogger(io)
@@ -111,16 +121,18 @@ function update_correlations!(position_averages, momentum_averages, n_ave, stead
             dropdims(x, dims=3)
         end
 
-        first_order_correlations!(first_order_x, sol, sol, n_ave)
-        second_order_correlations!(second_order_x, sol, sol, n_ave)
+        update_averages!(position_averages, sol, sol, n_ave)
 
-        for (dest1, dest2, src) ∈ zip(ft_sol1, ft_sol2, sol)
-            windowed_ft!(dest1, src, window1, first_idx1, plan1)
-            windowed_ft!(dest2, src, window2, first_idx2, plan2)
+        for (averages, ft_buffer, window_pair) ∈ zip(momentum_averages, ft_buffers, window_pairs)
+            ft_sol1, ft_sol2, plan1, plan2 = ft_buffer
+
+            for (dest1, dest2, src) ∈ zip(ft_sol1, ft_sol2, sol)
+                windowed_ft!(dest1, src, window_pair.first, plan1)
+                windowed_ft!(dest2, src, window_pair.second, plan2)
+            end
+
+            update_averages!(averages, ft_sol1, ft_sol2, n_ave)
         end
-
-        first_order_correlations!(first_order_k, ft_sol1, ft_sol2, n_ave)
-        second_order_correlations!(second_order_k, ft_sol1, ft_sol2, n_ave)
 
         n_ave += batchsize
     end
@@ -130,7 +142,7 @@ function update_correlations!(position_averages, momentum_averages, n_ave, stead
         finish!(progress)
     end
 
-    (first_order_x, second_order_x), (first_order_k, second_order_k), n_ave
+    position_averages, momentum_averages, n_ave
 end
 
 function update_correlations!(saving_dir, batchsize, nbatches, t_sim; array_type::Type{T}=Array, kwargs...) where {T}
