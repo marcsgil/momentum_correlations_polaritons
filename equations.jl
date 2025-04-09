@@ -6,10 +6,10 @@ end
 
 gaussian(x, center, width) = exp(-((x - center) / width)^2)
 
-function potential(rs, param)
-    param.V_def * gaussian(rs[1], param.x_def, param.w_def) -
-    im * param.V_damp * (gaussian(rs[1], zero(rs[1]), param.w_damp) +
-                         gaussian(rs[1], param.L, param.w_damp))
+function potential(xs, param)
+    param.V_def * gaussian(xs[1], param.x_def, param.w_def) -
+    im * param.V_damp * (gaussian(xs[1], zero(xs[1]), param.w_damp) +
+                         gaussian(xs[1], param.L, param.w_damp))
 end
 
 function half_pump(x, Fmax, Fmin, k, w, x0)
@@ -101,13 +101,13 @@ function calculate_momentum_commutators(window1, window2, first_idx1, first_idx2
 end
 
 function calculate_position_commutators(one_point, dx)
-    commutators_r = similar(one_point)
-    commutators_r[:, :, 1, 1] .= 1 / dx
-    commutators_r[:, :, 2, 2] .= 1 / dx
-    commutators_r[:, :, 1, 2] .= one(view(commutators_r, :, :, 1, 2)) ./ dx
-    commutators_r[:, :, 2, 1] .= view(commutators_r, :, :, 1, 2)
+    commutators_x = similar(one_point)
+    commutators_x[:, :, 1, 1] .= 1 / dx
+    commutators_x[:, :, 2, 2] .= 1 / dx
+    commutators_x[:, :, 1, 2] .= one(view(commutators_x, :, :, 1, 2)) ./ dx
+    commutators_x[:, :, 2, 1] .= view(commutators_x, :, :, 1, 2)
 
-    commutators_r
+    commutators_x
 end
 
 otherindex(x) = mod(x, 2) + 1

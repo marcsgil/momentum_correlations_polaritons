@@ -13,14 +13,14 @@ steady_state, param, t_steady_state = jldopen(joinpath(saving_dir, "steady_state
     file["t_steady_state"]
 end
 
-first_order_r, second_order_r, first_order_k, second_order_k = jldopen(joinpath(saving_dir, "averages.jld2")) do file
+first_order_x, second_order_x, first_order_k, second_order_k = jldopen(joinpath(saving_dir, "averages.jld2")) do file
 
     n_ave = file["n_ave"][1]
     order_of_magnitude = round(Int, log10(n_ave))
     @info "Average after $(n_ave / 10^order_of_magnitude) × 10^$order_of_magnitude realizations"
 
-    file["first_order_r"],
-    file["second_order_r"],
+    file["first_order_x"],
+    file["second_order_x"],
     file["first_order_k_1"],
     file["second_order_k_1"]
 end
@@ -32,12 +32,12 @@ window1, window2, first_idx1, first_idx2 = jldopen(joinpath(saving_dir, "windows
     file["window_pair_1"].second.first_idx
 end
 
-commutators_r = calculate_position_commutators(first_order_r, param.dx)
+commutators_r = calculate_position_commutators(first_order_x, param.dx)
 commutators_k = calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, param.dx)
 
 second_order_k
 
-g2_r = calculate_g2(first_order_r, second_order_r, commutators_r)
+g2_r = calculate_g2(first_order_x, second_order_x, commutators_r)
 
 second_order_k
 g2_k = fftshift(calculate_g2(first_order_k, second_order_k, commutators_k))
@@ -57,8 +57,8 @@ x_def = param.x_def
 
 n = Array(abs2.(steady_state[1]))
 
-n_up = n[argmin(abs.(rs .+ 500))]
-n_down = n[argmin(abs.(rs .- 500))]
+n_up = n[argmin(abs.(xs .+ 500))]
+n_down = n[argmin(abs.(xs .- 500))]
 
 pow = 5
 with_theme(theme_latexfonts()) do
@@ -66,7 +66,7 @@ with_theme(theme_latexfonts()) do
     ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"x", ylabel=L"x\prime")
     xlims!(ax, (-150, 150))
     ylims!(ax, (-150, 150))
-    hm = heatmap!(ax, rs, rs, (g2_r .- 1) * 10^pow, colorrange=(-6, 6), colormap=:inferno)
+    hm = heatmap!(ax, xs, xs, (g2_r .- 1) * 10^pow, colorrange=(-6, 6), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$pow})")
     #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/g2_postion.pdf", fig)
     fig
