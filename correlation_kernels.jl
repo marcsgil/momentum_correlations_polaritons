@@ -59,9 +59,13 @@ function windowed_ft!(dest, src, window_func, first_idx, plan)
     plan * dest
 end
 
-function update_correlations!(first_order_x, second_order_x, first_order_k, second_order_k, n_ave, steady_state, param, window_pairs, batchsize, nbatches, tspan;
+function update_correlations!(position_averages, momentum_averages, n_ave, steady_state, param, window_pairs, batchsize, nbatches, tspan;
     show_progress=true, noise_eltype=eltype(first(steady_state)), log_path="log.txt", max_datetime=typemax(DateTime),
     rng=nothing, kwargs...)
+
+    first_order_x, second_order_x = position_averages
+    first_order_k, second_order_k = momentum_averages
+
     u0 = map(steady_state) do x
         stack(x for _ ∈ 1:batchsize)
     end
@@ -126,7 +130,7 @@ function update_correlations!(first_order_x, second_order_x, first_order_k, seco
         finish!(progress)
     end
 
-    first_order_x, second_order_x, first_order_k, second_order_k, n_ave
+    (first_order_x, second_order_x), (first_order_k, second_order_k), n_ave
 end
 
 function update_correlations!(saving_dir, batchsize, nbatches, t_sim; array_type::Type{T}=Array, kwargs...) where {T}
@@ -134,28 +138,14 @@ function update_correlations!(saving_dir, batchsize, nbatches, t_sim; array_type
 
     steady_state, param, t_steady_state = read_steady_state(saving_dir, T)
     window_pairs = read_window_pairs(saving_dir, T)
-    init_correlations(saving_dir, steady_state, t_sim)
+    init_averages(saving_dir, steady_state, t_sim)
 
-    first_order_x, second_order_x, first_order_k, second_order_k, n_ave = jldopen(joinpath(saving_dir, "averages.jld2")) do file
-        file["first_order_x"] |> T,
-        file["second_order_x"] |> T,
-        file["first_order_k_1"] |> T,
-        file["second_order_k_1"] |> T,
-        file["n_ave"]
-    end
+    position_averages, momentum_averages, n_ave = read_averages(saving_dir, T)
 
     tspan = (t_steady_state, t_steady_state + t_sim)
 
-    first_order_x, second_order_x, first_order_k, second_order_k, n_ave = update_correlations!(
-        first_order_x, second_order_x, first_order_k, second_order_k, n_ave, steady_state, param, window_pairs, batchsize, nbatches, tspan; param, kwargs...)
+    position_averages, momentum_averages, n_ave = update_correlations!(
+        position_averages, momentum_averages, n_ave, steady_state, param, window_pairs, batchsize, nbatches, tspan; param, kwargs...)
 
-    new_content = Dict(
-        "first_order_x" => first_order_x |> Array,
-        "second_order_x" => second_order_x |> Array,
-        "first_order_k_1" => first_order_k |> Array,
-        "second_order_k_1" => second_order_k |> Array,
-        "n_ave" => n_ave
-    )
-
-    create_new_then_rename(joinpath(saving_dir, "averages.jld2"), new_content)
+    save_averages(saving_dir, position_averages, momentum_averages, n_ave)
 end

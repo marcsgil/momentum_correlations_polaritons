@@ -64,17 +64,17 @@ end
 
 # Averages
 
-function get_correlation_buffers(prototype1::NTuple{1}, prototype2::NTuple{1})
+function get_average_buffers(prototype1::NTuple{1}, prototype2::NTuple{1})
     second_order = zero(complex(first(prototype1))) * zero(complex(first(prototype2)))'
     first_order = stack(second_order for a ∈ 1:2, b ∈ 1:2)
     first_order, second_order
 end
 
-function init_correlations(saving_dir, steady_state, t_sim)
+function init_averages(saving_dir, steady_state, t_sim)
     path = joinpath(saving_dir, "averages.jld2")
     isfile(path) && return
 
-    first_order_x, second_order_x = get_correlation_buffers(steady_state, steady_state)
+    first_order_x, second_order_x = get_average_buffers(steady_state, steady_state)
 
     jldopen(path, "a+") do file
         file["first_order_x"] = Array(first_order_x)
@@ -88,7 +88,7 @@ function init_correlations(saving_dir, steady_state, t_sim)
         jldopen(window_path) do window_file
             for n ∈ eachindex(keys(window_file))
                 pair = window_file["window_pair_$n"]
-                first_order, second_order = get_correlation_buffers((pair.first.window,), (pair.second.window,))
+                first_order, second_order = get_average_buffers((pair.first.window,), (pair.second.window,))
                 file["first_order_k_$n"] = Array(first_order)
                 file["second_order_k_$n"] = Array(second_order)
             end
@@ -96,6 +96,30 @@ function init_correlations(saving_dir, steady_state, t_sim)
     end
 
     nothing
+end
+
+function read_averages(saving_dir, ::Type{T}) where {T}
+    first_order_x, second_order_x, first_order_k, second_order_k, n_ave = jldopen(joinpath(saving_dir, "averages.jld2")) do file
+        file["first_order_x"] |> T,
+        file["second_order_x"] |> T,
+        file["first_order_k_1"] |> T,
+        file["second_order_k_1"] |> T,
+        file["n_ave"]
+    end
+
+    (first_order_x, second_order_x), (first_order_k, second_order_k), n_ave
+end
+
+function save_averages(saving_dir, position_averages, momentum_averages, n_ave)
+    new_content = Dict(
+        "first_order_x" => position_averages[1] |> Array,
+        "second_order_x" => position_averages[2] |> Array,
+        "first_order_k_1" => momentum_averages[1] |> Array,
+        "second_order_k_1" => momentum_averages[2] |> Array,
+        "n_ave" => n_ave
+    )
+
+    create_new_then_rename(joinpath(saving_dir, "averages.jld2"), new_content)
 end
 
 function create_new_then_rename(file_path, new_content)
