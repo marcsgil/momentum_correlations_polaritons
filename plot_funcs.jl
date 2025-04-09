@@ -18,7 +18,7 @@ function plot_density(rs, field, param; xlims=nothing, ylims=nothing, fontsize=2
 end
 
 function plot_velocities!(ax, rs, field, param; xlims=nothing, ylims=nothing)
-    v = velocity(Array(field), param.ħ, param.m, param.δL)
+    v = velocity(Array(field), param.ħ, param.m, param.dx)
     c = Array(@. sqrt(ħ * g * abs2(field) / m))
 
     !isnothing(xlims) && xlims!(ax, xlims...)
@@ -38,8 +38,8 @@ function plot_velocities(rs, field, param; xlims=nothing, ylims=nothing, fontsiz
 end
 
 function plot_bistability!(ax1, ax2, rs, steady_state, param, x_up, x_down)
-    idx_up = argmin(idx->abs(rs[idx] - x_up), eachindex(rs))
-    idx_down = argmin(idx->abs(rs[idx] - x_down), eachindex(rs))
+    idx_up = argmin(idx -> abs(rs[idx] - x_up), eachindex(rs))
+    idx_down = argmin(idx -> abs(rs[idx] - x_down), eachindex(rs))
     n_up = abs2(Array(steady_state)[idx_up])
     n_down = abs2(Array(steady_state)[idx_down])
 
@@ -141,7 +141,7 @@ function plot_dispersion(rs, steady_state, param, x_up, x_down, Ω, ks_up, ks_do
         fig = Figure(fontsize=20, size=(800, 400))
         ax1 = Axis(fig[1, 1]; xlabel=L"\delta k", ylabel=L"\delta \omega", title="Upstream")
         ax2 = Axis(fig[1, 2]; xlabel=L"\delta k", title="Downstream")
-    
+
         hideydecorations!(ax2, grid=false)
         ylims!(ax1, (-1, 1))
         ylims!(ax2, (-1, 1))

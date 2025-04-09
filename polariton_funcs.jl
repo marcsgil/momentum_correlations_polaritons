@@ -20,6 +20,6 @@ function speed_of_sound(n, g, δ₀, K, ħ, m)
     2gn ≥ δ ? √(ħ * (2gn - δ) / m) : NaN
 end
 
-function velocity(steady_state, ħ, m, δL)
-    ħ * diff(unwrap(angle.(steady_state))) / m / δL
+function velocity(steady_state, ħ, m, dx)
+    ħ * diff(unwrap(angle.(steady_state))) / m / dx
 end

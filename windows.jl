@@ -9,8 +9,8 @@ saving_dir = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations
 param = jldopen(joinpath(saving_dir, "steady_state.jld2")) do file
     file["param"]
 end
-rs = StepRangeLen(0, param.δL, param.N) .- param.x_def
+xs = StepRangeLen(0, param.dx, param.N) .- param.x_def
 
-window1 = Window(-10, 790, rs, hamming)
-window2 = Window(-790, 10, rs, hamming)
+window1 = Window(-10, 790, xs, hamming)
+window2 = Window(-790, 10, xs, hamming)
 save_windows(saving_dir, Pair(window1, window2))

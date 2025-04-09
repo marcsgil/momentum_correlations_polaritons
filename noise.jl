@@ -3,6 +3,12 @@ include("io.jl")
 include("equations.jl")
 include("correlation_kernels.jl")
 
+#= Example usage:
+
+julia --project noise.jl --saving_dir /home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/SupportDownstreamRepulsive 
+--array_type CuArray  --batchsize 100000 --nbatches 10 --t_sim 50 --show_progress --max_datetime 2025,04,09,14,30
+=#
+
 function parse_commandline()
     s = ArgParseSettings(description="Run noise correlation simulations for polaritions.")
 

@@ -8,8 +8,8 @@ include("plot_funcs.jl")
 L = 2048.0f0
 lengths = (L,)
 N = 1024
-δL = L / N
-rs = StepRangeLen(0, δL, N)
+dx = L / N
+xs = StepRangeLen(0, dx, N)
 
 # Polariton parameters
 ħ = 0.6582f0 #meV.ps
@@ -51,7 +51,7 @@ nsaves = 512
 
 # Full parameter tuple
 param = (;
-    L, N, δL, dt,
+    L, N, dx, dt,
     m, g, ħ, γ, δ₀,
     V_damp, w_damp, V_def, w_def, x_def,
     k_up, k_down, divide, F_up, F_down, F_max, w_pump, extra_intensity, decay_time
@@ -63,16 +63,16 @@ tspan = (0f0, 1000.0f0)
 alg = StrangSplitting()
 ts, sol = GeneralizedGrossPitaevskii.solve(prob, alg, tspan; dt, nsaves);
 steady_state = map(x -> x[:, end], sol)
-heatmap(rs .- x_def, ts, Array(abs2.(sol[1])))
-plot_velocities(rs .- x_def, steady_state[1], param; xlims=(-900, 900), ylims=(0, 3))
+heatmap(xs .- x_def, ts, Array(abs2.(sol[1])))
+plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-900, 900), ylims=(0, 3))
 ##
-plot_density(rs, steady_state[1], param)
-plot_velocities(rs .- x_def, steady_state[1], param; xlims=(-100, 100), ylims=(0, 3))
-plot_bistability(rs .- x_def, steady_state[1], param, -500, 500)
+plot_density(xs, steady_state[1], param)
+plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-100, 100), ylims=(0, 3))
+plot_bistability(xs .- x_def, steady_state[1], param, -500, 500)
 
 ks_up = LinRange(-1, 1, 512)
 ks_down = LinRange(-1.5, 1.5, 512)
-plot_dispersion(rs .- x_def, steady_state[1], param, -200, 200, 0.5, ks_up, ks_down)
+plot_dispersion(xs .- x_def, steady_state[1], param, -200, 200, 0.5, ks_up, ks_down)
 ##
 saving_dir = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations/SupportDownstreamRepulsive"
 save_steady_state(saving_dir, steady_state, param, tspan)

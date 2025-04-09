@@ -32,13 +32,13 @@ function pump(x, param, t)
     ((param.F_max - F) * sech((x[1] - x0) / param.w_pump) + F) * cis(k * x[1]) * time_dependence(t, param)
 end
 
-nonlinearity(ψ, param) = param.g * (abs2(first(ψ)) - 1 / param.δL)
+nonlinearity(ψ, param) = param.g * (abs2(first(ψ)) - 1 / param.dx)
 
-noise_func(ψ, param) = √(param.γ / 2 / param.δL)
+noise_func(ψ, param) = √(param.γ / 2 / param.dx)
 
 choose(x1, x2, m) = isone(m) ? x1 : x2
 
-function calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, δL)
+function calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, dx)
     #= @kernel function kernel!(dest, _window1, _window2, _rs1, _rs2, _ks1, _ks2, _first_idx1, _first_idx2)
         a, b, m, n = @index(Global, NTuple)
         idx1 = choose(a, b, m)
@@ -65,30 +65,30 @@ function calculate_momentum_commutators(window1, window2, first_idx1, first_idx2
     N1 = length(window1)
     N2 = length(window2)
 
-    rs1 = (0:N1-1) * δL
-    rs2 = (0:N2-1) * δL
-    ks1 = fftfreq(N1, 2π / δL)
-    ks2 = fftfreq(N2, 2π / δL)
-    #ks1 = (0:N1-1) * 2π / δL / N1
-    #ks2 = (0:N2-1) * 2π / δL / N1
+    rs1 = (0:N1-1) * dx
+    rs2 = (0:N2-1) * dx
+    ks1 = fftfreq(N1, 2π / dx)
+    ks2 = fftfreq(N2, 2π / dx)
+    #ks1 = (0:N1-1) * 2π / dx / N1
+    #ks2 = (0:N2-1) * 2π / dx / N1
 
     dest = similar(window1, size(window1, 1), size(window2, 1), 2, 2)
     backend = get_backend(dest)
     kernel!(backend)(dest, window1, window2, rs1, rs2, ks1, ks2, first_idx1, first_idx2, ndrange=size(dest))
 
-    dest  / δL / length(window1) / length(window2) =#
+    dest  / dx / length(window1) / length(window2) =#
 
 
     commutators_k = stack(complex(window1) * window2' for a ∈ 1:2, b ∈ 1:2)
-    commutators_k[:, :, 1, 1] .= sum(abs2, window1) / δL
-    commutators_k[:, :, 2, 2] .= sum(abs2, window2) / δL
+    commutators_k[:, :, 1, 1] .= sum(abs2, window1) / dx
+    commutators_k[:, :, 2, 2] .= sum(abs2, window2) / dx
 
     off_diag_comm = zero(commutators_k[:, :, 1, 2])
 
     for n′ ∈ axes(off_diag_comm, 2)
         n = n′ + first_idx2 - first_idx1
         if n ∈ axes(off_diag_comm, 1)
-            off_diag_comm[n, n′] = window1[n] * conj(window2[n′]) / δL
+            off_diag_comm[n, n′] = window1[n] * conj(window2[n′]) / dx
         end
     end
 
@@ -100,11 +100,11 @@ function calculate_momentum_commutators(window1, window2, first_idx1, first_idx2
     commutators_k
 end
 
-function calculate_position_commutators(one_point, δL)
+function calculate_position_commutators(one_point, dx)
     commutators_r = similar(one_point)
-    commutators_r[:, :, 1, 1] .= 1 / δL
-    commutators_r[:, :, 2, 2] .= 1 / δL
-    commutators_r[:, :, 1, 2] .= one(view(commutators_r, :, :, 1, 2)) ./ δL
+    commutators_r[:, :, 1, 1] .= 1 / dx
+    commutators_r[:, :, 2, 2] .= 1 / dx
+    commutators_r[:, :, 1, 2] .= one(view(commutators_r, :, :, 1, 2)) ./ dx
     commutators_r[:, :, 2, 1] .= view(commutators_r, :, :, 1, 2)
 
     commutators_r

@@ -32,8 +32,8 @@ window1, window2, first_idx1, first_idx2 = jldopen(joinpath(saving_dir, "windows
     file["window_pair_1"].second.first_idx
 end
 
-commutators_r = calculate_position_commutators(first_order_r, param.δL)
-commutators_k = calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, param.δL)
+commutators_r = calculate_position_commutators(first_order_r, param.dx)
+commutators_k = calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, param.dx)
 
 second_order_k
 
@@ -44,8 +44,8 @@ g2_k = fftshift(calculate_g2(first_order_k, second_order_k, commutators_k))
 
 N = param.N
 L = param.L
-δL = param.δL
-rs = StepRangeLen(0, δL, N) .- param.x_def
+dx = param.dx
+xs = StepRangeLen(0, dx, N) .- param.x_def
 
 m = param.m
 δ₀ = param.δ₀
@@ -160,11 +160,11 @@ bracket2 = (k2_min, 0)
 
 corr_d2d2_star, corr_d2d2_star′ = correlate(param1, bracket1, param2, bracket2, 128, true)
 ##
-#ks = range(; start=-π / param.δL, step=2π / (size(g2_k, 1) * param.δL), length=size(g2_k, 1))
-ks1 = fftshift(fftfreq(length(window1), 2π / δL))
-ks2 = fftshift(fftfreq(length(window2), 2π / δL))
+#ks = range(; start=-π / param.dx, step=2π / (size(g2_k, 1) * param.dx), length=size(g2_k, 1))
+ks1 = fftshift(fftfreq(length(window1), 2π / dx))
+ks2 = fftshift(fftfreq(length(window2), 2π / dx))
 
-δL * length(window1)
+dx * length(window1)
 
 pow = 4
 
