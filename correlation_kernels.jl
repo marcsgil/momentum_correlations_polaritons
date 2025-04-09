@@ -58,6 +58,12 @@ function windowed_ft!(dest, src, window_func, first_idx, plan)
     plan * dest
 end
 
+function get_correlation_buffers(prototype1::NTuple{1}, prototype2::NTuple{1})
+    second_order = zero(complex(first(prototype1))) * zero(complex(first(prototype2)))'
+    first_order = stack(second_order for a ∈ 1:2, b ∈ 1:2)
+    first_order, second_order
+end
+
 function create_new_then_rename(file_path, new_content)
     parent = dirname(file_path)
     file_name = basename(file_path)
@@ -81,7 +87,7 @@ function create_new_then_rename(file_path, new_content)
     nothing
 end
 
-function update_correlations!(first_order_r, second_order_r, first_order_k, second_order_k, n_ave, steady_state, param, window1, window2, first_idx1, first_idx2, batchsize, nbatches, tspan;
+function update_correlations!(first_order_r, second_order_r, first_order_k, second_order_k, n_ave, steady_state, param, window_pairs, batchsize, nbatches, tspan;
     show_progress=true, noise_eltype=eltype(first(steady_state)), log_path="log.txt", max_datetime=typemax(DateTime),
     rng=nothing, kwargs...)
     u0 = map(steady_state) do x
@@ -93,11 +99,16 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
     prob = GrossPitaevskiiProblem(u0, (param.L,); noise_prototype, param, kwargs...)
     solver = StrangSplitting()
 
+    window1 = window_pairs[1].first.window
+    window2 = window_pairs[1].second.window
+    first_idx1 = window_pairs[1].first.first_idx
+    first_idx2 = window_pairs[1].second.first_idx
+
     ft_sol1 = map(steady_state) do x
-        stack(window1 for _ ∈ 1:batchsize)
+        stack(complex(window1) for _ ∈ 1:batchsize)
     end
     ft_sol2 = map(steady_state) do x
-        stack(window2 for _ ∈ 1:batchsize)
+        stack(complex(window2) for _ ∈ 1:batchsize)
     end
 
     plan1 = plan_fft!(ft_sol1[1], 1)
@@ -146,37 +157,63 @@ function update_correlations!(first_order_r, second_order_r, first_order_k, seco
     first_order_r, second_order_r, first_order_k, second_order_k, n_ave
 end
 
-function update_correlations!(saving_dir, batchsize, nbatches, t_sim; kwargs...)
-    saving_path = joinpath(saving_dir, "correlations.jld2")
-    @assert !isfile(joinpath(saving_dir, "previous_correlations.jld2")) "Previous averages file already exists. Please remove it before running the simulation."
+function init_correlations(saving_dir, steady_state, t_sim)
+    first_order_r, second_order_r = get_correlation_buffers(steady_state, steady_state)
 
-    param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, n_ave, window1, window2, first_idx1, first_idx2 = jldopen(joinpath(saving_dir, "correlations.jld2")) do file
+    jldopen(joinpath(saving_dir, "averages.jld2"), "a+") do file
+        file["first_order_r"] = first_order_r
+        file["second_order_r"] = second_order_r
+        file["n_ave"] = 0
+        file["t_sim"] = t_sim
+
+        jldopen(joinpath(saving_dir, "windows.jld2"), "a+") do window_file
+            for n ∈ eachindex(keys(window_file))
+                pair = window_file["window_pair_$n"]
+                first_order, second_order = get_correlation_buffers((pair.first.window,), (pair.second.window,))
+                file["first_order_k_$n"] = first_order
+                file["second_order_k_$n"] = second_order
+            end
+        end
+    end
+end
+
+function update_correlations!(saving_dir, batchsize, nbatches, t_sim; array_type=Array, kwargs...)
+    @assert !isfile(joinpath(saving_dir, "previous_averages.jld2")) "Previous averages file already exists. Please remove it before running the simulation."
+
+    steady_state, param, t_steady_state = jldopen(joinpath(saving_dir, "steady_state.jld2")) do file
+        file["steady_state"] .|> array_type,
         file["param"],
-        file["steady_state"],
-        file["t_steady_state"],
-        file["one_point_r"],
-        file["two_point_r"],
-        file["one_point_k"],
-        file["two_point_k"],
-        file["n_ave"][1],
-        file["window1"],
-        file["window2"],
-        file["first_idx1"],
-        file["first_idx2"]
+        file["t_steady_state"]
+    end
+
+    window_pairs = jldopen(joinpath(saving_dir, "windows.jld2")) do file
+        [read_window_pair(file, key, array_type) for key ∈ keys(file)]
+    end
+
+    if !isfile(joinpath(saving_dir, "averages.jld2"))
+        init_correlations(saving_dir, steady_state, t_sim)
+    end
+
+    first_order_r, second_order_r, first_order_k, second_order_k, n_ave = jldopen(joinpath(saving_dir, "averages.jld2")) do file
+        file["first_order_r"] |> array_type,
+        file["second_order_r"] |> array_type,
+        file["first_order_k_1"] |> array_type,
+        file["second_order_k_1"] |> array_type,
+        file["n_ave"]
     end
 
     tspan = (t_steady_state, t_steady_state + t_sim)
 
-    one_point_r, two_point_r, one_point_k, two_point_k, n_ave = update_correlations!(
-        one_point_r, two_point_r, one_point_k, two_point_k, n_ave, steady_state, param, window1, window2, first_idx1, first_idx2, batchsize, nbatches, tspan; param, kwargs...)
+    first_order_r, second_order_r, first_order_k, second_order_k, n_ave = update_correlations!(
+        first_order_r, second_order_r, first_order_k, second_order_k, n_ave, steady_state, param, window_pairs, batchsize, nbatches, tspan; param, kwargs...)
 
     new_content = Dict(
-        "one_point_r" => one_point_r,
-        "two_point_r" => two_point_r,
-        "one_point_k" => one_point_k,
-        "two_point_k" => two_point_k,
+        "first_order_r" => first_order_r |> Array,
+        "second_order_r" => second_order_r |> Array,
+        "first_order_k_1" => first_order_k |> Array,
+        "second_order_k_1" => second_order_k |> Array,
         "n_ave" => n_ave
     )
 
-    create_new_then_rename(joinpath(saving_dir, "correlations.jld2"), new_content)
+    create_new_then_rename(joinpath(saving_dir, "averages.jld2"), new_content)
 end

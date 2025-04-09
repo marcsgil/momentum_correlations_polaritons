@@ -79,7 +79,7 @@ function calculate_momentum_commutators(window1, window2, first_idx1, first_idx2
     dest  / δL / length(window1) / length(window2) =#
 
 
-    commutators_k = stack(window1 * window2' for a ∈ 1:2, b ∈ 1:2)
+    commutators_k = stack(complex(window1) * window2' for a ∈ 1:2, b ∈ 1:2)
     commutators_k[:, :, 1, 1] .= sum(abs2, window1) / δL
     commutators_k[:, :, 2, 2] .= sum(abs2, window2) / δL
 
@@ -104,8 +104,8 @@ function calculate_position_commutators(one_point, δL)
     commutators_r = similar(one_point)
     commutators_r[:, :, 1, 1] .= 1 / δL
     commutators_r[:, :, 2, 2] .= 1 / δL
-    commutators_r[:, :, 1, 2] .= one(two_point_r) ./ δL
-    commutators_r[:, :, 2, 1] .= one(two_point_r) ./ δL
+    commutators_r[:, :, 1, 2] .= one(view(commutators_r, :, :, 1, 2)) ./ δL
+    commutators_r[:, :, 2, 1] .= view(commutators_r, :, :, 1, 2)
 
     commutators_r
 end

@@ -7,31 +7,38 @@ include("plot_funcs.jl")
 
 saving_dir = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations/SupportDownstreamRepulsive"
 
+steady_state, param, t_steady_state = jldopen(joinpath(saving_dir, "steady_state.jld2")) do file
+    file["steady_state"],
+    file["param"],
+    file["t_steady_state"]
+end
 
-param, steady_state, t_steady_state, one_point_r, two_point_r, one_point_k, two_point_k, window1, window2, first_idx1, first_idx2 = jldopen(joinpath(saving_dir, "correlations.jld2")) do file
+first_order_r, second_order_r, first_order_k, second_order_k = jldopen(joinpath(saving_dir, "averages.jld2")) do file
 
     n_ave = file["n_ave"][1]
     order_of_magnitude = round(Int, log10(n_ave))
     @info "Average after $(n_ave / 10^order_of_magnitude) × 10^$order_of_magnitude realizations"
 
-    file["param"],
-    file["steady_state"],
-    file["t_steady_state"],
-    file["one_point_r"],
-    file["two_point_r"],
-    file["one_point_k"],
-    file["two_point_k"],
-    file["window1"],
-    file["window2"],
-    file["first_idx1"],
-    file["first_idx2"]
+    file["first_order_r"],
+    file["second_order_r"],
+    file["first_order_k_1"],
+    file["second_order_k_1"]
 end
 
-commutators_r = calculate_position_commutators(one_point_r, param.δL)
+window1, window2, first_idx1, first_idx2 = jldopen(joinpath(saving_dir, "windows.jld2")) do file
+    file["window_pair_1"].first.window,
+    file["window_pair_1"].second.window,
+    file["window_pair_1"].first.first_idx,
+    file["window_pair_1"].second.first_idx
+end
+
+commutators_r = calculate_position_commutators(first_order_r, param.δL)
 commutators_k = calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, param.δL)
 
-g2_r = calculate_g2(one_point_r, two_point_r, commutators_r)
-g2_k = fftshift(calculate_g2(one_point_k, two_point_k, commutators_k))
+second_order_k
+
+g2_r = calculate_g2(first_order_r, second_order_r, commutators_r)
+g2_k = fftshift(calculate_g2(first_order_k, second_order_k, commutators_k))
 
 N = param.N
 L = param.L
