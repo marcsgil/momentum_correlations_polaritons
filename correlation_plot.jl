@@ -5,7 +5,7 @@ include("polariton_funcs.jl")
 include("equations.jl")
 include("plot_funcs.jl")
 
-saving_dir = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations/SupportDownstreamRepulsive"
+saving_dir = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/SupportDownstreamRepulsive"
 
 steady_state, param, t_steady_state = jldopen(joinpath(saving_dir, "steady_state.jld2")) do file
     file["steady_state"],
@@ -38,6 +38,8 @@ commutators_k = calculate_momentum_commutators(window1, window2, first_idx1, fir
 second_order_k
 
 g2_r = calculate_g2(first_order_r, second_order_r, commutators_r)
+
+second_order_k
 g2_k = fftshift(calculate_g2(first_order_k, second_order_k, commutators_k))
 
 N = param.N
@@ -171,6 +173,8 @@ yticks = [0.0, k_up]
 
 _xticklabels = [L"0", L"k_{d}"]
 _yticklabels = [L"0", L"k_{u}"]
+
+g2_k
 
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(900, 600), fontsize=20)

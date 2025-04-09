@@ -34,9 +34,9 @@ function save_windows(saving_dir, pair)
     end
 end
 
-convert_window(window, array_type) = Window(array_type(window.window), window.first_idx)
+convert_window(window, ::Type{T}) where {T} = Window(T(window.window), window.first_idx)
 
-function read_window_pair(file, key, array_type)
+function read_window_pair(file, key, ::Type{T}) where {T}
     pair = file[key]
-    Pair(convert_window(pair.first, array_type), convert_window(pair.second, array_type))
+    Pair(convert_window(pair.first, T), convert_window(pair.second, T))
 end
