@@ -39,7 +39,7 @@ noise_func(ψ, param) = √(param.γ / 2 / param.dx)
 choose(x1, x2, m) = isone(m) ? x1 : x2
 
 function calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, dx)
-    commutators_k = stack(complex(window1) * window2' for a ∈ 1:2, b ∈ 1:2)
+    #= commutators_k = stack(complex(window1) * window2' for a ∈ 1:2, b ∈ 1:2)
     commutators_k[:, :, 1, 1] .= sum(abs2, window1) / dx
     commutators_k[:, :, 2, 2] .= sum(abs2, window2) / dx
 
@@ -57,23 +57,43 @@ function calculate_momentum_commutators(window1, window2, first_idx1, first_idx2
     commutators_k[:, :, 1, 2] .= off_diag_comm
     commutators_k[:, :, 2, 1] .= adjoint(off_diag_comm)
 
-    commutators_k
+    commutators_k =#
+    c11 = sum(abs2, window1) / dx
+    c22 = sum(abs2, window2) / dx
+
+    c12 = zero(complex(window1) * window2')
+
+    for n′ ∈ axes(c12, 2)
+        n = n′ + first_idx2 - first_idx1
+        if n ∈ axes(c12, 1)
+            c12[n, n′] = window1[n] * conj(window2[n′]) / dx
+        end
+    end
+
+    fft!(c12, 1)
+    bfft!(c12, 2)
+
+    c11, c22, c12
 end
 
-function calculate_position_commutators(one_point, dx)
-    commutators_x = similar(one_point)
+function calculate_position_commutators(N, dx)
+    #= commutators_x = similar(one_point)
     commutators_x[:, :, 1, 1] .= 1 / dx
     commutators_x[:, :, 2, 2] .= 1 / dx
     commutators_x[:, :, 1, 2] .= one(view(commutators_x, :, :, 1, 2)) ./ dx
     commutators_x[:, :, 2, 1] .= view(commutators_x, :, :, 1, 2)
 
-    commutators_x
+    commutators_x =#
+
+    c11 = 1 / dx
+    c22 = 1 / dx
+    c11, c22, Array(I(N)) ./ dx
 end
 
 otherindex(x) = mod(x, 2) + 1
 
-function calculate_g2(first_order, second_order, commutators)
-    G2 = second_order .+ (commutators[:, :, 1, 1] .* commutators[:, :, 2, 2] .+ commutators[:, :, 1, 2] .* commutators[:, :, 2, 1]) ./ 4
+function calculate_g2(averages, commutators)
+    #= G2 = second_order .+ (commutators[:, :, 1, 1] .* commutators[:, :, 2, 2] .+ commutators[:, :, 1, 2] .* commutators[:, :, 2, 1]) ./ 4
 
     for n ∈ axes(first_order, 4), m ∈ axes(first_order, 3)
         G2 .-= first_order[:, :, m, n] .* commutators[:, :, otherindex(m), otherindex(n)] ./ 2
@@ -82,5 +102,18 @@ function calculate_g2(first_order, second_order, commutators)
     n1 = first_order[:, :, 1, 1] - commutators[:, :, 1, 1] / 2
     n2 = first_order[:, :, 2, 2] - commutators[:, :, 2, 2] / 2
 
-    real(G2 ./ n1 ./ n2)
+    real(G2 ./ n1 ./ n2) =#
+    n1, n2, G1, G2 = averages
+    c11, c22, c12 = commutators
+
+    numerator = (
+        G2 + (c11 * c22 .+ abs2.(c12)) / 4
+        -
+        (c11 .* n1 .+ c22 .* n2') / 2
+        -
+        real(c12 .* G1)
+    )
+
+    denominator = (n1 .- c11 / 2) * (n2 .- c22 / 2)'
+    numerator ./ denominator
 end

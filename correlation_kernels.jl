@@ -11,29 +11,6 @@ function kahan_step(x, c, next)
     x, c
 end
 
-choose(x1, x2, m) = isone(m) ? x1 : x2
-
-@kernel function first_order_correlation_kernel!(dest, sol1, sol2, n_ave)
-    a, b, m, n = @index(Global, NTuple)
-    idx1 = choose(a, b, m)
-    idx2 = choose(a, b, n)
-    field1 = choose(sol1, sol2, m)
-    field2 = choose(sol1, sol2, n)
-
-    x = zero(eltype(dest))
-    c = zero(eltype(dest))  # Compensation term for Kahan summation
-    for r ∈ axes(sol1, 2)
-        next = field1[idx1, r] * conj(field2[idx2, r])
-        x, c = kahan_step(x, c, next)  # Apply Kahan summation
-    end
-    dest[a, b, m, n] = merge_averages(dest[a, b, m, n], n_ave, x, size(sol1, 2))
-end
-
-function first_order_correlations!(dest, sol1::NTuple{1}, sol2::NTuple{1}, n_ave)
-    backend = get_backend(dest)
-    first_order_correlation_kernel!(backend)(dest, sol1[1], sol2[1], n_ave, ndrange=size(dest))
-end
-
 @kernel function mean_prod_kernel!(dest, src1, src2, f1, f2, n_ave)
     j, k = @index(Global, NTuple)
     x = zero(eltype(dest))
@@ -48,14 +25,25 @@ end
     dest[j, k] = merge_averages(dest[j, k], n_ave, x, size(src1, 2))
 end
 
-function second_order_correlations!(dest, sol1::NTuple{1}, sol2::NTuple{1}, n_ave)
-    backend = get_backend(dest)
-    mean_prod_kernel!(backend)(dest, sol1[1], sol2[1], abs2, abs2, n_ave, ndrange=size(dest))
+@kernel function mean_kernel!(dest, src, f, n_ave)
+    j = @index(Global)
+    x = zero(eltype(dest))
+    c = zero(eltype(dest))  # Compensation term for Kahan summation
+
+    for m ∈ axes(src, 2)
+        next = f(src[j, m])
+        x, c = kahan_step(x, c, next)  # Apply Kahan summation
+    end
+
+    dest[j] = merge_averages(dest[j], n_ave, x, size(src, 2))
 end
 
 function update_averages!(averages, sol1, sol2, n_ave)
-    first_order_correlations!(averages[1], sol1, sol2, n_ave)
-    second_order_correlations!(averages[2], sol1, sol2, n_ave)
+    backend = get_backend(averages[1])
+    mean_kernel!(backend)(averages[1], sol1[1], abs2, n_ave; ndrange=size(averages[1]))
+    mean_kernel!(backend)(averages[2], sol2[1], abs2, n_ave; ndrange=size(averages[2]))
+    mean_prod_kernel!(backend)(averages[3], sol1[1], sol2[1], identity, conj, n_ave; ndrange=size(averages[3]))
+    mean_prod_kernel!(backend)(averages[4], sol1[1], sol2[1], abs2, abs2, n_ave; ndrange=size(averages[4]))
 end
 
 function windowed_ft!(dest, src, window_func, first_idx, plan)

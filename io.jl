@@ -66,9 +66,12 @@ end
 # Averages
 
 function get_average_buffers(prototype1::NTuple{1}, prototype2::NTuple{1})
-    second_order = zero(complex(first(prototype1))) * zero(complex(first(prototype2)))'
-    first_order = stack(second_order for a ∈ 1:2, b ∈ 1:2)
-    first_order, second_order
+    n1 = zero(real(first(prototype1)))
+    n2 = zero(real(first(prototype2)))
+    G2 = n1 * n2'
+    G1 = complex(G2)
+
+    n1, n2, G1, G2
 end
 
 function init_averages(saving_dir, steady_state, t_sim)

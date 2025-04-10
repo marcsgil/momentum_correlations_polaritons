@@ -13,7 +13,7 @@ steady_state, param, t_steady_state = jldopen(joinpath(saving_dir, "steady_state
     file["t_steady_state"]
 end
 
-window_idx = 4
+window_idx = 1
 
 position_averages, momentum_averages = jldopen(joinpath(saving_dir, "averages.jld2")) do file
     n_ave = file["n_ave"][1]
@@ -32,11 +32,11 @@ window1, window2, first_idx1, first_idx2 = jldopen(joinpath(saving_dir, "windows
     pair.second.first_idx
 end
 
-commutators_r = calculate_position_commutators(position_averages[1], param.dx)
+commutators_r = calculate_position_commutators(param.N, param.dx)
 commutators_k = calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, param.dx)
 
-g2_r = calculate_g2(position_averages..., commutators_r)
-g2_k = fftshift(calculate_g2(momentum_averages..., commutators_k))
+g2_r = calculate_g2(position_averages, commutators_r)
+g2_k = fftshift(calculate_g2(momentum_averages, commutators_k))
 
 N = param.N
 L = param.L
@@ -65,20 +65,6 @@ with_theme(theme_latexfonts()) do
     hm = heatmap!(ax, xs, xs, (g2_r .- 1) * 10^pow, colorrange=(-6, 6), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$pow})")
     #save(joinpath(saving_dir, "g2_position.pdf"), fig)
-    fig
-end
-##
-plot_velocities(rs, steady_state, param, xlims=(-200, 200), ylims=(0, 2.6))
-plot_dispersion(rs, steady_state, param, -200, 200, 0.6, LinRange(-0.7, 0.7, 100), LinRange(-1.5, 1.5, 100))
-##
-with_theme(theme_latexfonts()) do
-    fig = Figure(; fontsize=20)
-    ax = Axis(fig[1, 1], xlabel=L"x \ (\mu m)")
-    lines!(ax, rs, g .* abs2.(steady_state), linewidth=4, label=L"gn")
-    lines!(ax, rs[first_idx1:first_idx1+length(window1)-1], abs.(window1), linewidth=4, linestyle=:dash, label="Window 1 (a.u.)")
-    lines!(ax, rs[first_idx2:first_idx2+length(window2)-1], abs.(window2), linewidth=4, linestyle=:dash, label="Window 2 (a.u.)")
-    axislegend(ax)
-    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/windows_100.pdf", fig)
     fig
 end
 ##

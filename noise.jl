@@ -10,7 +10,7 @@ batchsize = 100000
 nbatches = 10
 t_sim = 50.0f0
 show_progress = true
-max_datetime = DateTime(2025, 4, 9, 17, 30)
+max_datetime = DateTime(2025, 4, 10, 17, 30)
 array_type = CuArray
 #array_type = Array
 
