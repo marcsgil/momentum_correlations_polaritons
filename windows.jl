@@ -6,7 +6,7 @@ function hamming(N, ::Type{T}) where {T}
 end
 
 function hann(N, ::Type{T}) where {T}
-    [sinpi(n / (N - 1))^2 for n ∈ 0:N-1]
+    [T(sinpi(n / (N - 1))^2) for n ∈ 0:N-1]
 end
 
 saving_dir = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations/SupportDownstreamRepulsive"
