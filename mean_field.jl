@@ -66,13 +66,15 @@ steady_state = map(x -> x[:, end], sol)
 heatmap(xs .- x_def, ts, Array(abs2.(sol[1])))
 plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-900, 900), ylims=(0, 3))
 ##
-plot_density(xs, steady_state[1], param)
-plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-100, 100), ylims=(0, 3))
-plot_bistability(xs .- x_def, steady_state[1], param, -500, 500)
+saving_dir = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations/SupportDownstreamRepulsive"
+
+plot_density(xs, steady_state[1], param; saving_dir)
+plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-900, 900), ylims=(0, 3), saving_dir)
+plot_bistability(xs .- x_def, steady_state[1], param, -500, 500; saving_dir)
 
 ks_up = LinRange(-1, 1, 512)
 ks_down = LinRange(-1.5, 1.5, 512)
-plot_dispersion(xs .- x_def, steady_state[1], param, -200, 200, 0.5, ks_up, ks_down)
+plot_dispersion(xs .- x_def, steady_state[1], param, -200, 200, 0.5, ks_up, ks_down; saving_dir)
 ##
-saving_dir = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations/SupportDownstreamRepulsive"
+
 save_steady_state(saving_dir, steady_state, param, tspan)

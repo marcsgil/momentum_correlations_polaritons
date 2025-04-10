@@ -12,7 +12,7 @@ function save_steady_state(saving_dir, steady_state, param, tspan)
     end
 end
 
-function read_steady_state(saving_dir, ::Type{T}) where {T}
+function read_steady_state(saving_dir, ::Type{T}=Array) where {T}
     path = joinpath(saving_dir, "steady_state.jld2")
 
     jldopen(path) do file
@@ -55,7 +55,7 @@ function read_window_pair(file, key, ::Type{T}) where {T}
     Pair(convert_window(pair.first, T), convert_window(pair.second, T))
 end
 
-function read_window_pairs(saving_dir, ::Type{T}) where {T}
+function read_window_pairs(saving_dir, ::Type{T}=Array) where {T}
     path = joinpath(saving_dir, "windows.jld2")
     isfile(path) || return []
     jldopen(path) do file

@@ -13,7 +13,7 @@ steady_state, param, t_steady_state = jldopen(joinpath(saving_dir, "steady_state
     file["t_steady_state"]
 end
 
-window_idx = 2
+window_idx = 4
 
 position_averages, momentum_averages = jldopen(joinpath(saving_dir, "averages.jld2")) do file
     n_ave = file["n_ave"][1]
@@ -64,7 +64,7 @@ with_theme(theme_latexfonts()) do
     ylims!(ax, (-150, 150))
     hm = heatmap!(ax, xs, xs, (g2_r .- 1) * 10^pow, colorrange=(-6, 6), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$pow})")
-    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/g2_postion.pdf", fig)
+    #save(joinpath(saving_dir, "g2_position.pdf"), fig)
     fig
 end
 ##
@@ -166,12 +166,12 @@ _xticklabels = [L"0", L"k_{d}"]
 _yticklabels = [L"0", L"k_{u}"]
 
 with_theme(theme_latexfonts()) do
-    pow = 3
-    fig = Figure(; size=(900, 600), fontsize=20)
+    pow = 4
+    fig = Figure(; size=(700, 600), fontsize=20)
     ax = Axis(fig[1, 1]; aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime", xticks=(xticks, _xticklabels), yticks=(yticks, _yticklabels))
-    #xlims!(ax, (-0.65, 0.65) .+ k_down)
-    #ylims!(ax, (-0.65, 0.65) .+ k_up)
-    hm = heatmap!(ax, ks1, ks2, (g2_k .- 1) * 10^pow, colorrange=(-2, 2), colormap=:inferno)
+    xlims!(ax, (-0.65, 0.65) .+ k_down)
+    ylims!(ax, (-0.65, 0.65) .+ k_up)
+    hm = heatmap!(ax, ks1, ks2, (g2_k .- 1) * 10^pow, colorrange=(-6, 6), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$pow})")
 
     #= lines!(ax, corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=(:black, 0.8), linestyle=(:dash, :loose), label=L"u_{\text{out}} \leftrightarrow d1_{\text{out}}")
@@ -190,7 +190,7 @@ with_theme(theme_latexfonts()) do
     #scatter!(ax, k_up - 0.3, k_up + 0.15, color=:cyan, markersize=16, label = "?")
     #Legend(fig[1, 3], ax)
 
-    #save("/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/Plots/TruncatedWigner/g2_momentum_150.pdf", fig)
+    save(joinpath(saving_dir, "g2_momentum_$window_idx.pdf"), fig)
     fig
 end
 ##
