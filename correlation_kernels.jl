@@ -11,20 +11,6 @@ function kahan_step(x, c, next)
     x, c
 end
 
-@kernel function mean_prod_kernel!(dest, src1, src2, f1, f2, n_ave)
-    j, k = @index(Global, NTuple)
-    x = zero(eltype(dest))
-    c = zero(eltype(dest))  # Compensation term for Kahan summation
-
-    for m ∈ axes(src1, 2)
-        # Calculate product for this element
-        next = f1(src1[j, m]) * f2(src2[k, m])
-        x, c = kahan_step(x, c, next)  # Apply Kahan summation
-    end
-
-    dest[j, k] = merge_averages(dest[j, k], n_ave, x, size(src1, 2))
-end
-
 @kernel function mean_kernel!(dest, src, f, n_ave)
     j = @index(Global)
     x = zero(eltype(dest))
@@ -38,12 +24,29 @@ end
     dest[j] = merge_averages(dest[j], n_ave, x, size(src, 2))
 end
 
+@kernel function twoD_kernel!(dest1, dest2, src1, src2, n_ave)
+    j, k = @index(Global, NTuple)
+    x1 = zero(eltype(dest1))
+    c1 = zero(eltype(dest1))
+    x2 = zero(eltype(dest2))
+    c2 = zero(eltype(dest2))
+
+    for m ∈ axes(src1, 2)
+        next1 = src1[j, m] * conj(src2[k, m])
+        next2 = abs2(next1)
+        x1, c1 = kahan_step(x1, c1, next1)  # Apply Kahan summation
+        x2, c2 = kahan_step(x2, c2, next2)  # Apply Kahan summation
+    end
+
+    dest1[j, k] = merge_averages(dest1[j, k], n_ave, x1, size(src1, 2))
+    dest2[j, k] = merge_averages(dest2[j, k], n_ave, x2, size(src1, 2))
+end
+
 function update_averages!(averages, sol1, sol2, n_ave)
     backend = get_backend(averages[1])
     mean_kernel!(backend)(averages[1], sol1[1], abs2, n_ave; ndrange=size(averages[1]))
     mean_kernel!(backend)(averages[2], sol2[1], abs2, n_ave; ndrange=size(averages[2]))
-    mean_prod_kernel!(backend)(averages[3], sol1[1], sol2[1], identity, conj, n_ave; ndrange=size(averages[3]))
-    mean_prod_kernel!(backend)(averages[4], sol1[1], sol2[1], abs2, abs2, n_ave; ndrange=size(averages[4]))
+    twoD_kernel!(backend)(averages[3], averages[4], sol1[1], sol2[1], n_ave; ndrange=size(averages[3]))
 end
 
 function windowed_ft!(dest, src, window_func, first_idx, plan)

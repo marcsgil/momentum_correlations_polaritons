@@ -13,7 +13,7 @@ steady_state, param, t_steady_state = jldopen(joinpath(saving_dir, "steady_state
     file["t_steady_state"]
 end
 
-window_idx = 1
+window_idx = 3
 
 position_averages, momentum_averages = jldopen(joinpath(saving_dir, "averages.jld2")) do file
     n_ave = file["n_ave"][1]
@@ -23,6 +23,8 @@ position_averages, momentum_averages = jldopen(joinpath(saving_dir, "averages.jl
     file["position_averages"],
     file["momentum_averages_$window_idx"]
 end
+
+heatmap(abs2.(position_averages[3]))
 
 window1, window2, first_idx1, first_idx2 = jldopen(joinpath(saving_dir, "windows.jld2")) do file
     pair = file["window_pair_$window_idx"]
