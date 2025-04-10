@@ -1,4 +1,4 @@
-using KernelAbstractions, FFTW, Logging, Dates, LinearAlgebra, ProgressMeter
+using KernelAbstractions, FFTW, Logging, Dates, LinearAlgebra, ProgressMeter, Statistics
 
 merge_averages(μ, n, new_sum, new_n) = μ / (1 + new_n / n) + new_sum / (n + new_n)
 
