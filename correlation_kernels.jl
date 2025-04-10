@@ -2,6 +2,10 @@ using KernelAbstractions, FFTW, Logging, Dates, LinearAlgebra, ProgressMeter
 
 merge_averages(μ, n, new_sum, new_n) = μ / (1 + new_n / n) + new_sum / (n + new_n)
 
+function merge_averages!(μ1, n1, μ2, n2)
+    @. μ1 = μ1 / (1 + n2 / n1) + μ2 / (1 + n1 / n2)
+end
+
 function kahan_step(x, c, next)
     # Apply Kahan summation algorithm
     y = next - c    # Corrected value (value to be added minus compensation)
@@ -44,8 +48,13 @@ end
 
 function update_averages!(averages, sol1, sol2, n_ave)
     backend = get_backend(averages[1])
-    mean_kernel!(backend)(averages[1], sol1[1], abs2, n_ave; ndrange=size(averages[1]))
-    mean_kernel!(backend)(averages[2], sol2[1], abs2, n_ave; ndrange=size(averages[2]))
+    #mean_kernel!(backend)(averages[1], sol1[1], abs2, n_ave; ndrange=size(averages[1]))
+    #mean_kernel!(backend)(averages[2], sol2[1], abs2, n_ave; ndrange=size(averages[2]))
+    μ1 = mean(abs2, sol1[1], dims=2)
+    μ2 = mean(abs2, sol2[1], dims=2)
+    N = size(sol1[1], 2)
+    merge_averages!(averages[1], n_ave, μ1, N)
+    merge_averages!(averages[2], n_ave, μ2, N)
     twoD_kernel!(backend)(averages[3], averages[4], sol1[1], sol2[1], n_ave; ndrange=size(averages[3]))
 end
 
