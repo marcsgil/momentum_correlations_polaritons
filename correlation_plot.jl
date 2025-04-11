@@ -13,7 +13,7 @@ steady_state, param, t_steady_state = jldopen(joinpath(saving_dir, "steady_state
     file["t_steady_state"]
 end
 
-window_idx = 2
+window_idx = 1
 
 position_averages, momentum_averages = jldopen(joinpath(saving_dir, "averages.jld2")) do file
     n_ave = file["n_ave"][1]
@@ -34,6 +34,7 @@ end
 
 commutators_r = calculate_position_commutators(param.N, param.dx)
 commutators_k = calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, param.dx)
+#commutators_r[3] .= 0
 #commutators_k[3] .= 0
 
 g2_r = calculate_g2m1(position_averages, commutators_r)
@@ -63,7 +64,7 @@ with_theme(theme_latexfonts()) do
     ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"x", ylabel=L"x\prime")
     xlims!(ax, (-150, 150))
     ylims!(ax, (-150, 150))
-    hm = heatmap!(ax, xs, xs, (g2_r) * 10^pow, colorrange=(-6, 6), colormap=:inferno)
+    hm = heatmap!(ax, xs, xs, g2_r * 10^pow, colorrange=(-6, 6), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$pow})")
     #save(joinpath(saving_dir, "g2_position.pdf"), fig)
     fig
