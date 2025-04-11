@@ -36,28 +36,7 @@ nonlinearity(ψ, param) = param.g * (abs2(first(ψ)) - 1 / param.dx)
 
 noise_func(ψ, param) = √(param.γ / 2 / param.dx)
 
-choose(x1, x2, m) = isone(m) ? x1 : x2
-
 function calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, dx)
-    #= commutators_k = stack(complex(window1) * window2' for a ∈ 1:2, b ∈ 1:2)
-    commutators_k[:, :, 1, 1] .= sum(abs2, window1) / dx
-    commutators_k[:, :, 2, 2] .= sum(abs2, window2) / dx
-
-    off_diag_comm = zero(commutators_k[:, :, 1, 2])
-
-    for n′ ∈ axes(off_diag_comm, 2)
-        n = n′ + first_idx2 - first_idx1
-        if n ∈ axes(off_diag_comm, 1)
-            off_diag_comm[n, n′] = window1[n] * conj(window2[n′]) / dx
-        end
-    end
-
-    fft!(off_diag_comm, 1)
-    bfft!(off_diag_comm, 2)
-    commutators_k[:, :, 1, 2] .= off_diag_comm
-    commutators_k[:, :, 2, 1] .= adjoint(off_diag_comm)
-
-    commutators_k =#
     c11 = sum(abs2, window1) / dx
     c22 = sum(abs2, window2) / dx
 

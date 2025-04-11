@@ -13,9 +13,9 @@ steady_state, param, t_steady_state = jldopen(joinpath(saving_dir, "steady_state
     file["t_steady_state"]
 end
 
-window_idx = 1
+window_idx = 2
 
-position_averages, momentum_averages = jldopen(joinpath(saving_dir, "averages.jld2")) do file
+position_averages, momentum_averages = jldopen(joinpath(saving_dir, "previous_averages.jld2")) do file
     n_ave = file["n_ave"][1]
     order_of_magnitude = round(Int, log10(n_ave))
     @info "Average after $(n_ave / 10^order_of_magnitude) × 10^$order_of_magnitude realizations"
@@ -23,8 +23,6 @@ position_averages, momentum_averages = jldopen(joinpath(saving_dir, "averages.jl
     file["position_averages"],
     file["momentum_averages_$window_idx"]
 end
-
-lines(position_averages[2])
 
 window1, window2, first_idx1, first_idx2 = jldopen(joinpath(saving_dir, "windows.jld2")) do file
     pair = file["window_pair_$window_idx"]
@@ -36,13 +34,15 @@ end
 
 commutators_r = calculate_position_commutators(param.N, param.dx)
 commutators_k = calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, param.dx)
+commutators_k[3] .= 0
 
-#g2_r = calculate_g2m1(position_averages, commutators_r)
-g2_r = position_averages[4] ./ (position_averages[1] .* position_averages[2]')
+commutators_k[3]
 
-#g2_k = fftshift(calculate_g2m1(momentum_averages, commutators_k))
-g2_k = fftshift( momentum_averages[4] ./ (momentum_averages[1] .* momentum_averages[2]') )
+g2_r = calculate_g2m1(position_averages, commutators_r)
+g2_k = fftshift(calculate_g2m1(momentum_averages, commutators_k))
 
+extrema(abs2.(commutators_k[3]) ./ momentum_averages[4])
+##
 N = param.N
 L = param.L
 dx = param.dx
@@ -67,7 +67,7 @@ with_theme(theme_latexfonts()) do
     ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"x", ylabel=L"x\prime")
     xlims!(ax, (-150, 150))
     ylims!(ax, (-150, 150))
-    hm = heatmap!(ax, xs, xs, (g2_r ) * 10^pow, colorrange=(-6, 6), colormap=:inferno)
+    hm = heatmap!(ax, xs, xs, (g2_r) * 10^pow, colorrange=(-6, 6), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$pow})")
     #save(joinpath(saving_dir, "g2_position.pdf"), fig)
     fig
@@ -157,7 +157,7 @@ _xticklabels = [L"0", L"k_{d}"]
 _yticklabels = [L"0", L"k_{u}"]
 
 with_theme(theme_latexfonts()) do
-    pow = 2
+    pow = 4
     fig = Figure(; size=(700, 600), fontsize=20)
     ax = Axis(fig[1, 1]; aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime", xticks=(xticks, _xticklabels), yticks=(yticks, _yticklabels))
     #xlims!(ax, (-0.65, 0.65) .+ k_down)
