@@ -107,5 +107,5 @@ function calculate_g2m1(averages, commutators)
     n1 = μ1 .- c11 / 2
     n2 = μ2 .- c22 / 2
 
-    (σ² - real(c12 .* G1) + abs2.(c12)) ./ (n1 * n2')
+    (σ² - real(conj(c12) .* G1) + abs2.(c12) / 4) ./ (n1 * n2')
 end

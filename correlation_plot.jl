@@ -37,9 +37,11 @@ end
 commutators_r = calculate_position_commutators(param.N, param.dx)
 commutators_k = calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, param.dx)
 
-g2_r = calculate_g2m1(position_averages, commutators_r)
-g2_k = fftshift(calculate_g2m1(momentum_averages, commutators_k))
-#g2_k = fftshift( momentum_averages[4] ./ (momentum_averages[1] .* momentum_averages[2]') )
+#g2_r = calculate_g2m1(position_averages, commutators_r)
+g2_r = position_averages[4] ./ (position_averages[1] .* position_averages[2]')
+
+#g2_k = fftshift(calculate_g2m1(momentum_averages, commutators_k))
+g2_k = fftshift( momentum_averages[4] ./ (momentum_averages[1] .* momentum_averages[2]') )
 
 N = param.N
 L = param.L
@@ -155,12 +157,12 @@ _xticklabels = [L"0", L"k_{d}"]
 _yticklabels = [L"0", L"k_{u}"]
 
 with_theme(theme_latexfonts()) do
-    pow = 4
+    pow = 2
     fig = Figure(; size=(700, 600), fontsize=20)
     ax = Axis(fig[1, 1]; aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime", xticks=(xticks, _xticklabels), yticks=(yticks, _yticklabels))
-    xlims!(ax, (-0.65, 0.65) .+ k_down)
-    ylims!(ax, (-0.65, 0.65) .+ k_up)
-    hm = heatmap!(ax, ks1, ks2, (g2_k .- 1) * 10^pow, colorrange=(-6, 6), colormap=:inferno)
+    #xlims!(ax, (-0.65, 0.65) .+ k_down)
+    #ylims!(ax, (-0.65, 0.65) .+ k_up)
+    hm = heatmap!(ax, ks1, ks2, (g2_k) * 10^pow, colorrange=(-6, 6), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$pow})")
 
     #= lines!(ax, corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=(:black, 0.8), linestyle=(:dash, :loose), label=L"u_{\text{out}} \leftrightarrow d1_{\text{out}}")
