@@ -34,15 +34,11 @@ end
 
 commutators_r = calculate_position_commutators(param.N, param.dx)
 commutators_k = calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, param.dx)
-commutators_k[3] .= 0
-
-commutators_k[3]
+#commutators_k[3] .= 0
 
 g2_r = calculate_g2m1(position_averages, commutators_r)
 g2_k = fftshift(calculate_g2m1(momentum_averages, commutators_k))
 
-extrema(abs2.(commutators_k[3]) ./ momentum_averages[4])
-##
 N = param.N
 L = param.L
 dx = param.dx

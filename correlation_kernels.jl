@@ -38,7 +38,7 @@ end
 
     N = n
 
-    for m ∈ axes(src, 2)
+    for m ∈ axes(src1, 2)
         N += 1
         μ += (src1[j, m] * conj(src2[k, m]) - μ) / N
     end
@@ -51,7 +51,7 @@ function update_averages!(averages, sol1, sol2, n_ave)
     covariance_kernel!(backend)(averages[4], sol1[1], sol2[1], averages[1], averages[2], n_ave; ndrange=size(averages[4]))
     mean_kernel!(backend)(averages[1], sol1[1], n_ave; ndrange=size(averages[1]))
     mean_kernel!(backend)(averages[2], sol2[1], n_ave; ndrange=size(averages[2]))
-    menean_prod_kernel!(backend)(averages[3], sol1[1], sol2[1], n_ave; ndrange=size(averages[3]))
+    mean_prod_kernel!(backend)(averages[3], sol1[1], sol2[1], n_ave; ndrange=size(averages[3]))
 end
 
 function windowed_ft!(dest, src, window_func, first_idx, plan)
