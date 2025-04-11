@@ -5,7 +5,7 @@ include("polariton_funcs.jl")
 include("equations.jl")
 include("plot_funcs.jl")
 
-saving_dir = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations/SupportDownstreamRepulsive"
+saving_dir = "/Users/marcsgil/LEON3/MomentumCorrelations/SupportDownstreamRepulsive"
 
 steady_state, param, t_steady_state = jldopen(joinpath(saving_dir, "steady_state.jld2")) do file
     file["steady_state"],
@@ -13,16 +13,15 @@ steady_state, param, t_steady_state = jldopen(joinpath(saving_dir, "steady_state
     file["t_steady_state"]
 end
 
-window_idx = 1
-
 position_averages, momentum_averages = jldopen(joinpath(saving_dir, "averages.jld2")) do file
     n_ave = file["n_ave"][1]
     order_of_magnitude = round(Int, log10(n_ave))
     @info "Average after $(n_ave / 10^order_of_magnitude) × 10^$order_of_magnitude realizations"
-
-    file["position_averages"],
-    file["momentum_averages_$window_idx"]
+    
+    file["position_averages"], file["momentum_averages_1"]
 end
+
+window_idx = 1
 
 window1, window2, first_idx1, first_idx2 = jldopen(joinpath(saving_dir, "windows.jld2")) do file
     pair = file["window_pair_$window_idx"]
@@ -34,8 +33,6 @@ end
 
 commutators_r = calculate_position_commutators(param.N, param.dx)
 commutators_k = calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, param.dx)
-#commutators_r[3] .= 0
-#commutators_k[3] .= 0
 
 g2_r = calculate_g2m1(position_averages, commutators_r)
 g2_k = fftshift(calculate_g2m1(momentum_averages, commutators_k))
@@ -67,7 +64,7 @@ with_theme(theme_latexfonts()) do
     hm = heatmap!(ax, xs, xs, g2_r * 10^pow, colorrange=(-6, 6), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$pow})")
     #save(joinpath(saving_dir, "g2_position.pdf"), fig)
-    fig
+    #fig
 end
 ##
 param_up = (n_up, param.g, param.δ₀, param.k_up, param.ħ, param.m)
