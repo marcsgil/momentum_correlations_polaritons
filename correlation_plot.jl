@@ -15,7 +15,7 @@ end
 
 window_idx = 2
 
-position_averages, momentum_averages = jldopen(joinpath(saving_dir, "previous_averages.jld2")) do file
+position_averages, momentum_averages = jldopen(joinpath(saving_dir, "averages.jld2")) do file
     n_ave = file["n_ave"][1]
     order_of_magnitude = round(Int, log10(n_ave))
     @info "Average after $(n_ave / 10^order_of_magnitude) × 10^$order_of_magnitude realizations"

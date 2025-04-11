@@ -1,20 +1,5 @@
 using KernelAbstractions, FFTW, Logging, Dates, LinearAlgebra, ProgressMeter, Statistics
 
-merge_averages(μ, n, new_sum, new_n) = μ / (1 + new_n / n) + new_sum / (n + new_n)
-
-function merge_averages!(μ1, n1, μ2, n2)
-    @. μ1 = μ1 / (1 + n2 / n1) + μ2 / (1 + n1 / n2)
-end
-
-function kahan_step(x, c, next)
-    # Apply Kahan summation algorithm
-    y = next - c    # Corrected value (value to be added minus compensation)
-    t = x + y          # Raw sum (might lose low-order bits)
-    c = (t - x) - y    # Calculate new compensation term
-    x = t
-    x, c
-end
-
 @kernel function mean_kernel!(dest, src, n)
     j = @index(Global)
     μ = dest[j]
@@ -47,38 +32,26 @@ end
     dest[j, k] = σ²
 end
 
-@kernel function twoD_kernel!(dest1, dest2, src1, src2, n_ave)
+@kernel function mean_prod_kernel!(dest, src1, src2, n)
     j, k = @index(Global, NTuple)
-    x1 = zero(eltype(dest1))
-    c1 = zero(eltype(dest1))
-    x2 = zero(eltype(dest2))
-    c2 = zero(eltype(dest2))
+    μ = dest[j, k]
 
-    for m ∈ axes(src1, 2)
-        next1 = src1[j, m] * conj(src2[k, m])
-        next2 = abs2(next1)
-        x1, c1 = kahan_step(x1, c1, next1)  # Apply Kahan summation
-        x2, c2 = kahan_step(x2, c2, next2)  # Apply Kahan summation
+    N = n
+
+    for m ∈ axes(src, 2)
+        N += 1
+        μ += (src1[j, m] * conj(src2[k, m]) - μ) / N
     end
 
-    dest1[j, k] = merge_averages(dest1[j, k], n_ave, x1, size(src1, 2))
-    dest2[j, k] = merge_averages(dest2[j, k], n_ave, x2, size(src1, 2))
+    dest[j, k] = μ
 end
 
 function update_averages!(averages, sol1, sol2, n_ave)
     backend = get_backend(averages[1])
-    #= μ1 = mean(abs2, sol1[1], dims=2)
-    μ2 = mean(abs2, sol2[1], dims=2)
-    N = size(sol1[1], 2)
-    merge_averages!(averages[1], n_ave, μ1, N)
-    merge_averages!(averages[2], n_ave, μ2, N)
-    twoD_kernel!(backend)(averages[3], averages[4], sol1[1], sol2[1], n_ave; ndrange=size(averages[3])) =#
-
     covariance_kernel!(backend)(averages[4], sol1[1], sol2[1], averages[1], averages[2], n_ave; ndrange=size(averages[4]))
     mean_kernel!(backend)(averages[1], sol1[1], n_ave; ndrange=size(averages[1]))
     mean_kernel!(backend)(averages[2], sol2[1], n_ave; ndrange=size(averages[2]))
-    n_batch = size(sol1[1], 2)
-    mul!(averages[3], sol1[1], sol2[1]', 1 / (1 + n_batch / n_ave), 1 / (1 + n_ave / n_batch))
+    menean_prod_kernel!(backend)(averages[3], sol1[1], sol2[1], n_ave; ndrange=size(averages[3]))
 end
 
 function windowed_ft!(dest, src, window_func, first_idx, plan)
