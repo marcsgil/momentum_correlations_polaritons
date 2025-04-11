@@ -1,3 +1,4 @@
+using CairoMakie
 include("tracing.jl")
 include("io.jl")
 

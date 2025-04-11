@@ -24,7 +24,7 @@ position_averages, momentum_averages = jldopen(joinpath(saving_dir, "averages.jl
     file["momentum_averages_$window_idx"]
 end
 
-heatmap(abs2.(position_averages[3]))
+lines(position_averages[2])
 
 window1, window2, first_idx1, first_idx2 = jldopen(joinpath(saving_dir, "windows.jld2")) do file
     pair = file["window_pair_$window_idx"]
@@ -37,8 +37,9 @@ end
 commutators_r = calculate_position_commutators(param.N, param.dx)
 commutators_k = calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, param.dx)
 
-g2_r = calculate_g2(position_averages, commutators_r)
-g2_k = fftshift(calculate_g2(momentum_averages, commutators_k))
+g2_r = calculate_g2m1(position_averages, commutators_r)
+g2_k = fftshift(calculate_g2m1(momentum_averages, commutators_k))
+#g2_k = fftshift( momentum_averages[4] ./ (momentum_averages[1] .* momentum_averages[2]') )
 
 N = param.N
 L = param.L
@@ -64,7 +65,7 @@ with_theme(theme_latexfonts()) do
     ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"x", ylabel=L"x\prime")
     xlims!(ax, (-150, 150))
     ylims!(ax, (-150, 150))
-    hm = heatmap!(ax, xs, xs, (g2_r .- 1) * 10^pow, colorrange=(-6, 6), colormap=:inferno)
+    hm = heatmap!(ax, xs, xs, (g2_r ) * 10^pow, colorrange=(-6, 6), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$pow})")
     #save(joinpath(saving_dir, "g2_position.pdf"), fig)
     fig
@@ -178,7 +179,7 @@ with_theme(theme_latexfonts()) do
     #scatter!(ax, k_up - 0.3, k_up + 0.15, color=:cyan, markersize=16, label = "?")
     #Legend(fig[1, 3], ax)
 
-    save(joinpath(saving_dir, "g2_momentum_$window_idx.pdf"), fig)
+    #save(joinpath(saving_dir, "g2_momentum_$window_idx.pdf"), fig)
     fig
 end
 ##

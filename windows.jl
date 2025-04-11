@@ -16,26 +16,37 @@ param = jldopen(joinpath(saving_dir, "steady_state.jld2")) do file
 end
 xs = StepRangeLen(0, param.dx, param.N) .- param.x_def
 ##
-window1 = Window(-10, 790, xs, hann)
-window2 = Window(-790, 10, xs, hann)
+window1 = Window(-10, 790, xs, hamming)
+window2 = Window(-790, 10, xs, hamming)
 save_window_pair(saving_dir, Pair(window1, window2))
 ##
-window1 = Window(0, 800, xs, hann)
-window2 = Window(-800, 0, xs, hann)
-save_window_pair(saving_dir, Pair(window1, window2))
+for func ∈ (hamming, hann)
+    window1 = Window(-10, 790, xs, func)
+    window2 = Window(-790, 10, xs, func)
+    save_window_pair(saving_dir, Pair(window1, window2))
+end
 ##
-window1 = Window(10, 810, xs, hann)
-window2 = Window(-810, -10, xs, hann)
-save_window_pair(saving_dir, Pair(window1, window2))
+for func ∈ (hamming, hann)
+    window1 = Window(0, 800, xs, func)
+    window2 = Window(-800, 0, xs, func)
+    save_window_pair(saving_dir, Pair(window1, window2))
+end
 ##
-window1 = Window(-800, 800, xs, hann)
-window2 = Window(-800, 800, xs, hann)
+for func ∈ (hamming, hann)
+    window1 = Window(10, 810, xs, func)
+    window2 = Window(-810, -10, xs, func)
+    save_window_pair(saving_dir, Pair(window1, window2))
+end
+##
+for func ∈ (hamming, hann)
+    window1 = Window(-800, 800, xs, func)
+    window2 = Window(-800, 800, xs, func)
+    save_window_pair(saving_dir, Pair(window1, window2))
+end
 
 #= gauss = @. exp(-(xs / 300)^2)
 
 window1 = Window(gauss, 1)
 window2 = Window(gauss, 1) =#
-
-save_window_pair(saving_dir, Pair(window1, window2))
 ##
 plot_all_windows(saving_dir, savefig=true)

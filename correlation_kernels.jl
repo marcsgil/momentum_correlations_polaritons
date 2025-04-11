@@ -15,17 +15,36 @@ function kahan_step(x, c, next)
     x, c
 end
 
-@kernel function mean_kernel!(dest, src, f, n_ave)
+@kernel function mean_kernel!(dest, src, n)
     j = @index(Global)
-    x = zero(eltype(dest))
-    c = zero(eltype(dest))  # Compensation term for Kahan summation
+    μ = dest[j]
+
+    N = n
 
     for m ∈ axes(src, 2)
-        next = f(src[j, m])
-        x, c = kahan_step(x, c, next)  # Apply Kahan summation
+        N += 1
+        μ += (abs2(src[j, m]) - μ) / N
     end
 
-    dest[j] = merge_averages(dest[j], n_ave, x, size(src, 2))
+    dest[j] = μ
+end
+
+@kernel function covariance_kernel!(dest, src1, src2, μ1, μ2, n)
+    j, k = @index(Global, NTuple)
+    σ² = dest[j, k]
+    m1 = μ1[j]
+    m2 = μ2[k]
+
+    N = n
+
+    for m ∈ axes(src1, 2)
+        N += 1
+        m1 += (abs2(src1[j, m]) - m1) / N
+        σ² += ((abs2(src1[j, m]) - m1) * (abs2(src2[k, m]) - m2) - σ²) / N
+        m2 += (abs2(src2[k, m]) - m2) / N
+    end
+
+    dest[j, k] = σ²
 end
 
 @kernel function twoD_kernel!(dest1, dest2, src1, src2, n_ave)
@@ -48,12 +67,18 @@ end
 
 function update_averages!(averages, sol1, sol2, n_ave)
     backend = get_backend(averages[1])
-    μ1 = mean(abs2, sol1[1], dims=2)
+    #= μ1 = mean(abs2, sol1[1], dims=2)
     μ2 = mean(abs2, sol2[1], dims=2)
     N = size(sol1[1], 2)
     merge_averages!(averages[1], n_ave, μ1, N)
     merge_averages!(averages[2], n_ave, μ2, N)
-    twoD_kernel!(backend)(averages[3], averages[4], sol1[1], sol2[1], n_ave; ndrange=size(averages[3]))
+    twoD_kernel!(backend)(averages[3], averages[4], sol1[1], sol2[1], n_ave; ndrange=size(averages[3])) =#
+
+    covariance_kernel!(backend)(averages[4], sol1[1], sol2[1], averages[1], averages[2], n_ave; ndrange=size(averages[4]))
+    mean_kernel!(backend)(averages[1], sol1[1], n_ave; ndrange=size(averages[1]))
+    mean_kernel!(backend)(averages[2], sol2[1], n_ave; ndrange=size(averages[2]))
+    n_batch = size(sol1[1], 2)
+    mul!(averages[3], sol1[1], sol2[1]', 1 / (1 + n_batch / n_ave), 1 / (1 + n_ave / n_batch))
 end
 
 function windowed_ft!(dest, src, window_func, first_idx, plan)
