@@ -38,7 +38,7 @@ F_sonic_up = γ * √(δ_up / g) / 2
 F_sonic_down = γ * √(δ_down / g) / 2
 
 F_up = F_sonic_up + 0.005
-F_down = F_sonic_down + 0.30
+F_down = F_sonic_down + 0.15
 F_max = 20
 
 w_pump = 20
@@ -66,15 +66,14 @@ steady_state = map(x -> x[:, end], sol)
 heatmap(xs .- x_def, ts, Array(abs2.(sol[1])))
 plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-300, 300), ylims=(0, 3))
 ##
-saving_dir = "/Users/marcsgil/LEON3/MomentumCorrelations/SupportDownstreamRepulsive"
+saving_dir = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations/SupportDownstreamRepulsive"
 
 plot_density(xs, steady_state[1], param; saving_dir)
 plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-900, 900), ylims=(0, 3), saving_dir)
 plot_bistability(xs .- x_def, steady_state[1], param, -500, 500; saving_dir)
 
-ks_up = LinRange(-1, 1, 512)
+ks_up = LinRange(-0.7, 0.7, 512)
 ks_down = LinRange(-1.5, 1.5, 512)
 plot_dispersion(xs .- x_def, steady_state[1], param, -200, 200, 0.5, ks_up, ks_down; saving_dir)
 ##
-
 save_steady_state(saving_dir, steady_state, param, tspan)

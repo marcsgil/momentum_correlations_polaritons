@@ -5,7 +5,7 @@ include("polariton_funcs.jl")
 include("equations.jl")
 include("plot_funcs.jl")
 
-saving_dir = "/Users/marcsgil/LEON3/MomentumCorrelations/SupportDownstreamRepulsive"
+saving_dir = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations/SupportDownstreamRepulsive"
 
 steady_state, param, t_steady_state = jldopen(joinpath(saving_dir, "steady_state.jld2")) do file
     file["steady_state"],
@@ -63,8 +63,8 @@ with_theme(theme_latexfonts()) do
     ylims!(ax, (-150, 150))
     hm = heatmap!(ax, xs, xs, g2_r * 10^pow, colorrange=(-6, 6), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$pow})")
-    #save(joinpath(saving_dir, "g2_position.pdf"), fig)
-    #fig
+    save(joinpath(saving_dir, "g2_position.pdf"), fig)
+    fig
 end
 ##
 param_up = (n_up, param.g, param.δ₀, param.k_up, param.ħ, param.m)
@@ -154,8 +154,8 @@ with_theme(theme_latexfonts()) do
     pow = 4
     fig = Figure(; size=(700, 600), fontsize=20)
     ax = Axis(fig[1, 1]; aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime", xticks=(xticks, _xticklabels), yticks=(yticks, _yticklabels))
-    #xlims!(ax, (-0.65, 0.65) .+ k_down)
-    #ylims!(ax, (-0.65, 0.65) .+ k_up)
+    xlims!(ax, (-0.65, 0.65) .+ k_down)
+    ylims!(ax, (-0.65, 0.65) .+ k_up)
     hm = heatmap!(ax, ks1, ks2, (g2_k) * 10^pow, colorrange=(-6, 6), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$pow})")
 
