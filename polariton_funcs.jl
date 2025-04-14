@@ -11,7 +11,7 @@ function dispersion_relation(k, n, g, δ₀, K, ħ, m, branch::Bool)
     gn = g * n
     v = ħ * K / m
     δ = detuning(δ₀, K, ħ, m)
-    v * k + (2branch - 1) * √((2gn - δ + ħ * k^2 / 2m)^2 - (gn)^2)
+    v * k + (2branch - 1) * real(√complex((2gn - δ + ħ * k^2 / 2m)^2 - (gn)^2))
 end
 
 function speed_of_sound(n, g, δ₀, K, ħ, m)

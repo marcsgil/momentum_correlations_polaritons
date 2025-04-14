@@ -5,29 +5,29 @@ include("equations.jl")
 include("plot_funcs.jl")
 
 # Space parameters
-L = 2048.0
+L = 1024.0f0
 lengths = (L,)
-N = 1024
+N = 512
 dx = L / N
 xs = StepRangeLen(0, dx, N)
 
 # Polariton parameters
-ħ = 0.6582 #meV.ps
-γ = 0.047 / ħ
-m = ħ^2 / (2 * 1.29) #1 / 6f0 # meV.ps^2/μm^2; This is 3×10^-5 the electron mass
-g = 3e-4 / ħ
-δ₀ = 0.49 / ħ
+ħ = 0.6582f0 #meV.ps
+γ = 0.047f0 / ħ
+m = ħ^2 / (2 * 1.29f0) #1 / 6f0 # meV.ps^2/μm^2; This is 3×10^-5 the electron mass
+g = 3f-4 / ħ
+δ₀ = 0.49f0 / ħ
 
 # Potential parameters
-V_damp = 4.5 / ħ
-w_damp = 20.0
+V_damp = 4.5f0 / ħ
+w_damp = 20.0f0
 x_def = L / 2
-V_def = 0.85 / ħ
-w_def = 0.75
+V_def = 0.85f0 / ħ
+w_def = 0.75f0
 
 # Pump parameters
-k_up = 0.15
-k_down = 0.584
+k_up = 0.148f0
+k_down = 0.614f0
 
 divide = x_def - 7
 
@@ -37,16 +37,16 @@ divide = x_def - 7
 F_sonic_up = γ * √(δ_up / g) / 2
 F_sonic_down = γ * √(δ_down / g) / 2
 
-F_up = F_sonic_up + 0.005
-F_down = F_sonic_down + 0.005
-F_max = 20
+F_up = F_sonic_up + 0.01f0
+F_down = F_sonic_down + 0.3f0
+F_max = 20f0
 
-w_pump = 20
+w_pump = 20f0
 
-decay_time = 100.0
-extra_intensity = 6.0
+decay_time = 100.0f0
+extra_intensity = 6.0f0
 
-dt = 2.0e-1
+dt = 2.0f-1
 nsaves = 512
 
 # Full parameter tuple
@@ -59,22 +59,22 @@ param = (;
 
 u0 = (zeros(complex(typeof(L)), N),)
 prob = GrossPitaevskiiProblem(u0, lengths; dispersion, potential, nonlinearity, pump, param)
-tspan = (0, 2000.0)
+tspan = (0, 2000.0f0)
 alg = StrangSplitting()
 ts, sol = GeneralizedGrossPitaevskii.solve(prob, alg, tspan; dt, nsaves);
 steady_state = map(x -> x[:, end], sol)
 heatmap(xs .- x_def, ts, Array(abs2.(sol[1])))
 plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-300, 300), ylims=(0, 3))
-#plot_bistability(xs .- x_def, steady_state[1], param, -500, 500, factor_ns_down=1.2)
+plot_bistability(xs .- x_def, steady_state[1], param, -200, 200, factor_ns_down=8)
 ##
-#saving_dir = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations/SupportDownstreamRepulsive"
+saving_dir = "/Users/marcsgil/LEON/MomentumCorrelations/SupportDownstreamRepulsive"
 
 plot_density(xs, steady_state[1], param; saving_dir)
-plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-900, 900), ylims=(0, 3), saving_dir)
-plot_bistability(xs .- x_def, steady_state[1], param, -500, 500; saving_dir, factor_ns_down=1.2)
+plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-300, 300), ylims=(0, 3), saving_dir)
+plot_bistability(xs .- x_def, steady_state[1], param, -200, 200; saving_dir, factor_ns_down=8)
 
 ks_up = LinRange(-0.7, 0.7, 512)
 ks_down = LinRange(-1.5, 1.5, 512)
-plot_dispersion(xs .- x_def, steady_state[1], param, -500, 500, 0.5, ks_up, ks_down; saving_dir)
+plot_dispersion(xs .- x_def, steady_state[1], param, -100, 100, 0.4, ks_up, ks_down; saving_dir)
 ##
 save_steady_state(saving_dir, steady_state, param, tspan)
