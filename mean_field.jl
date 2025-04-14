@@ -27,7 +27,7 @@ w_def = 0.75
 
 # Pump parameters
 k_up = 0.15
-k_down = 0.61
+k_down = 0.584
 
 divide = x_def - 7
 
@@ -38,7 +38,7 @@ F_sonic_up = γ * √(δ_up / g) / 2
 F_sonic_down = γ * √(δ_down / g) / 2
 
 F_up = F_sonic_up + 0.005
-F_down = F_sonic_down + 0.15
+F_down = F_sonic_down + 0.005
 F_max = 20
 
 w_pump = 20
@@ -65,15 +65,16 @@ ts, sol = GeneralizedGrossPitaevskii.solve(prob, alg, tspan; dt, nsaves);
 steady_state = map(x -> x[:, end], sol)
 heatmap(xs .- x_def, ts, Array(abs2.(sol[1])))
 plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-300, 300), ylims=(0, 3))
+#plot_bistability(xs .- x_def, steady_state[1], param, -500, 500, factor_ns_down=1.2)
 ##
-saving_dir = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations/SupportDownstreamRepulsive"
+#saving_dir = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations/SupportDownstreamRepulsive"
 
 plot_density(xs, steady_state[1], param; saving_dir)
 plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-900, 900), ylims=(0, 3), saving_dir)
-plot_bistability(xs .- x_def, steady_state[1], param, -500, 500; saving_dir)
+plot_bistability(xs .- x_def, steady_state[1], param, -500, 500; saving_dir, factor_ns_down=1.2)
 
 ks_up = LinRange(-0.7, 0.7, 512)
 ks_down = LinRange(-1.5, 1.5, 512)
-plot_dispersion(xs .- x_def, steady_state[1], param, -200, 200, 0.5, ks_up, ks_down; saving_dir)
+plot_dispersion(xs .- x_def, steady_state[1], param, -500, 500, 0.5, ks_up, ks_down; saving_dir)
 ##
 save_steady_state(saving_dir, steady_state, param, tspan)
