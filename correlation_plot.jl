@@ -13,50 +13,24 @@ steady_state, param, t_steady_state = jldopen(joinpath(saving_dir, "steady_state
     file["t_steady_state"]
 end
 
-position_averages, momentum_averages = jldopen(joinpath(saving_dir, "averages.jld2")) do file
+position_averages = jldopen(joinpath(saving_dir, "averages.jld2")) do file
     n_ave = file["n_ave"][1]
     order_of_magnitude = round(Int, log10(n_ave))
     @info "Average after $(n_ave / 10^order_of_magnitude) × 10^$order_of_magnitude realizations"
     
-    file["position_averages"], file["momentum_averages_1"]
-end
-
-window_idx = 1
-
-window1, window2, first_idx1, first_idx2 = jldopen(joinpath(saving_dir, "windows.jld2")) do file
-    pair = file["window_pair_$window_idx"]
-    pair.first.window,
-    pair.second.window,
-    pair.first.first_idx,
-    pair.second.first_idx
+    file["position_averages"]
 end
 
 commutators_r = calculate_position_commutators(param.N, param.dx)
-commutators_k = calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, param.dx)
-
 g2_r = calculate_g2m1(position_averages, commutators_r)
-g2_k = fftshift(calculate_g2m1(momentum_averages, commutators_k))
 
 N = param.N
 L = param.L
 dx = param.dx
 xs = StepRangeLen(0, dx, N) .- param.x_def
 
-m = param.m
-δ₀ = param.δ₀
-g = param.g
-ħ = param.ħ
-k_up = param.k_up
-k_down = param.k_down
-x_def = param.x_def
-
-n = Array(abs2.(steady_state[1]))
-
-n_up = n[argmin(abs.(xs .+ 500))]
-n_down = n[argmin(abs.(xs .- 500))]
-
-pow = 5
 with_theme(theme_latexfonts()) do
+    pow = 5
     fig = Figure(; size=(730, 600), fontsize=20)
     ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"x", ylabel=L"x\prime")
     xlims!(ax, (-150, 150))
@@ -67,6 +41,10 @@ with_theme(theme_latexfonts()) do
     fig
 end
 ##
+n = abs2.(steady_state[1])
+n_up = n[argmin(abs.(xs .+ 500))]
+n_down = n[argmin(abs.(xs .- 500))]
+
 param_up = (n_up, param.g, param.δ₀, param.k_up, param.ħ, param.m)
 param_down = (n_down, param.g, param.δ₀, param.k_down, param.ħ, param.m)
 
@@ -141,8 +119,28 @@ bracket2 = (k2_min, 0)
 
 corr_d2d2_star, corr_d2d2_star′ = correlate(param1, bracket1, param2, bracket2, 128, true)
 ##
+window_idx = 2
+window1, window2, first_idx1, first_idx2 = jldopen(joinpath(saving_dir, "windows.jld2")) do file
+    pair = file["window_pair_$window_idx"]
+    pair.first.window,
+    pair.second.window,
+    pair.first.first_idx,
+    pair.second.first_idx
+end
+
+commutators_k = calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, param.dx)
+
+momentum_averages = jldopen(joinpath(saving_dir, "averages.jld2")) do file
+    file["momentum_averages_$window_idx"]
+end
+
+g2_k = fftshift(calculate_g2m1(momentum_averages, commutators_k))
+
 ks1 = fftshift(fftfreq(length(window1), 2π / dx))
 ks2 = fftshift(fftfreq(length(window2), 2π / dx))
+
+k_up = param.k_up
+k_down = param.k_down
 
 xticks = [0.0, k_down]
 yticks = [0.0, k_up]
@@ -156,7 +154,7 @@ with_theme(theme_latexfonts()) do
     ax = Axis(fig[1, 1]; aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime", xticks=(xticks, _xticklabels), yticks=(yticks, _yticklabels))
     xlims!(ax, (-0.65, 0.65) .+ k_down)
     ylims!(ax, (-0.65, 0.65) .+ k_up)
-    hm = heatmap!(ax, ks1, ks2, (g2_k) * 10^pow, colorrange=(-6, 6), colormap=:inferno)
+    hm = heatmap!(ax, ks1, ks2, (g2_k) * 10^pow, colorrange=(-4, 4), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$pow})")
 
     #= lines!(ax, corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=(:black, 0.8), linestyle=(:dash, :loose), label=L"u_{\text{out}} \leftrightarrow d1_{\text{out}}")
@@ -179,28 +177,12 @@ with_theme(theme_latexfonts()) do
     fig
 end
 ##
-#diag_part = diag((g2_k .- 1) * 10^power)
-freq_freq = rfftfreq(length(ks), 2π / (ks[2] - ks[1]))
-
-
-g2_k
-J = 370:640
-
-heatmap((g2_k[J, J] .- 1) * 10^power, colorrange=(-2, 2), colormap=:inferno)
-
-heatmap(freq_freq[1:25], freq_freq[1:25], abs.(rfft(g2_k[J, J] .- 1) * 10^power)[1:25, 1:25], colormap=:inferno)
-
 with_theme(theme_latexfonts()) do
-    fig = Figure()
-    ax = Axis(fig[1, 1])
-    lines!(diag_part)
-    fig
-end
-
-with_theme(theme_latexfonts()) do
-    fig = Figure()
-    ax = Axis(fig[1, 1])
-    xlims!(ax, (0, 50))
-    lines!(ax, freq_freq, abs.(rfft(diag_part)))
+    fig = Figure(; size=(700, 600), fontsize=20)
+    ax = Axis(fig[1, 1], xlabel=L"k", yscale=log10)
+    lines!(ax, ks1, fftshift(momentum_averages[1]), linewidth=3, label=L"\langle n_{down} \rangle")
+    lines!(ax, ks2, fftshift(momentum_averages[2]), linewidth=3, label=L"\langle n_{up} \rangle")
+    axislegend(ax, position=:lt)
+    #save(joinpath(saving_dir, "n_momentum_$window_idx.pdf"), fig)
     fig
 end
