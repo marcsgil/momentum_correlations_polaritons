@@ -20,25 +20,37 @@ end
 using CairoMakie, JLD2,FFTW,PlutoUI
 
 # ╔═╡ 24fe98b2-fca5-48ee-aef4-833e6ecda2fd
-@bind width PlutoUI.Slider(0:900)
+@bind width PlutoUI.Slider(0:2:900)
 
 # ╔═╡ 5c1bfad2-8ff3-4d47-aec4-b80cea793b27
-@bind center PlutoUI.Slider(-900:900)
+@bind center PlutoUI.Slider(-900:2:900)
 
 # ╔═╡ cb400634-401b-46e9-8868-9afbac0060b3
 function hamming(N, ::Type{T}) where {T}
     α = 25 / 46
     β = 1 - α
-    [T(α - β * cospi(2 * n / (N - 1))) for n ∈ 0:N-1]
+    [T(α - β * cospi(2 * n / N)) for n ∈ 0:N-1]
 end
 
 # ╔═╡ d7656893-1401-4de7-b0cc-dd226f7b07f8
 function hann(N, ::Type{T}) where {T}
-    [T(sinpi(n / (N - 1))^2) for n ∈ 0:N-1]
+    [T(sinpi(n / N)^2) for n ∈ 0:N-1]
 end
 
+# ╔═╡ faf88868-350a-4d1b-871f-151aa9181078
+rect(N, ::Type{T}) where {T} = ones(T, N)
+
 # ╔═╡ 06220843-c2b2-46c3-8f6c-9939ee8fa85e
-func = hann
+func = rect
+
+# ╔═╡ c5c6f856-0ce7-47fb-8a20-75aec27def0f
+function blackman_harris(N, ::Type{T}) where {T}
+	a0 = 0.35875
+	a1 = 0.48829
+	a2 = 0.14128
+	a3 = 0.01168
+	[T( a0 - a1 * cospi(2n / N) + a2 * cospi(4n / N) - a3 * cospi(6n / N) ) for n ∈ 0:N-1]
+end
 
 # ╔═╡ bf86e458-4b62-4f33-a1d9-361baf3dc335
 saving_dir = "Results/SupportDownstreamRepulsive1"
@@ -82,16 +94,23 @@ plan = plan_fft!(dest);
 # ╔═╡ 977306fe-2044-4f17-804a-e550322fce28
 ks = fftshift(fftfreq(length(window1.window), 2π / param.dx))
 
+# ╔═╡ d227e38c-ebbe-4855-915d-9aee8231f43e
+N2 = param.dx^2 * length(window1.window) / 2π / sum(abs2, window1.window)
+
 # ╔═╡ 7c3342c8-42ff-481b-b297-b0bbb028d3c7
 with_theme(theme_latexfonts()) do
         fig = Figure(; size=(700, 600), fontsize=20)
-        ax = Axis(fig[1, 1], xlabel=L"k", yscale=log10, ylabel = L"\langle n \rangle")
-        lines!(ax, ks, abs2.(fftshift(dest)), linewidth=3)
-        ylims!(10^-3, 10^8)
+        ax = Axis(fig[1, 1], xlabel=L"k", yscale=log10, ylabel = L"|\psi(k)|^2")
+        lines!(ax, ks, abs2.(fftshift(dest)) * N2, linewidth=3)
+        ylims!(10^0, 10^8)
 		text!(0.1, 0.9; space = :relative, text="center = $center")
 		text!(0.1, 0.8; space = :relative, text="width = $width")
 		vlines!(ax, param.k_up, linewidth = 4, linestyle = :dash, color = :black)
 		vlines!(ax, param.k_down, linewidth = 4, linestyle = :dash, color = :black)
+
+		ax2 = Axis(fig[2, 1], xlabel=L"x", ylabel = L"g|\psi(x)|^2")
+		lines!(ax2,xs, param.g * abs2.(steady_state[1]), linewidth=4)
+		lines!(ax2,xs[window1.first_idx:window1.first_idx+length(window1.window)-1], window1.window, linewidth=4)
         fig
     end
 
@@ -1665,12 +1684,15 @@ version = "3.6.0+0"
 # ╠═02d658df-c6eb-43f8-955e-943bb32b1e56
 # ╠═acc182f1-3719-4735-b552-2153eb423099
 # ╠═977306fe-2044-4f17-804a-e550322fce28
+# ╠═d227e38c-ebbe-4855-915d-9aee8231f43e
 # ╠═06220843-c2b2-46c3-8f6c-9939ee8fa85e
 # ╠═24fe98b2-fca5-48ee-aef4-833e6ecda2fd
 # ╠═5c1bfad2-8ff3-4d47-aec4-b80cea793b27
 # ╠═7c3342c8-42ff-481b-b297-b0bbb028d3c7
 # ╠═cb400634-401b-46e9-8868-9afbac0060b3
 # ╠═d7656893-1401-4de7-b0cc-dd226f7b07f8
+# ╠═faf88868-350a-4d1b-871f-151aa9181078
+# ╠═c5c6f856-0ce7-47fb-8a20-75aec27def0f
 # ╠═bf86e458-4b62-4f33-a1d9-361baf3dc335
 # ╠═f1e7d382-a975-4db0-80c7-bd46f18bf04e
 # ╠═f90a904e-fb2b-43d2-9f23-f75cea57ab7d

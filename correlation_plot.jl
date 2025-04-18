@@ -5,7 +5,7 @@ include("polariton_funcs.jl")
 include("equations.jl")
 include("plot_funcs.jl")
 
-saving_dir = "/Users/marcsgil/LEON/MomentumCorrelations/SupportDownstreamRepulsive"
+saving_dir = "/Users/marcsgil/Code/momentum_correlations_polaritons/Results/SupportDownstreamRepulsive1"
 
 steady_state, param, t_steady_state = jldopen(joinpath(saving_dir, "steady_state.jld2")) do file
     file["steady_state"],
@@ -119,7 +119,7 @@ bracket2 = (k2_min, 0)
 
 corr_d2d2_star, corr_d2d2_star′ = correlate(param1, bracket1, param2, bracket2, 128, true)
 ##
-window_idx = 1
+window_idx = 8
 window1, window2, first_idx1, first_idx2 = jldopen(joinpath(saving_dir, "windows.jld2")) do file
     pair = file["window_pair_$window_idx"]
     pair.first.window,
@@ -133,6 +133,11 @@ commutators_k = calculate_momentum_commutators(window1, window2, first_idx1, fir
 momentum_averages = jldopen(joinpath(saving_dir, "averages.jld2")) do file
     file["momentum_averages_$window_idx"]
 end
+
+xs[first_idx1]
+
+param.k_up
+param.k_down
 
 g2_k = fftshift(calculate_g2m1(momentum_averages, commutators_k))
 
@@ -149,17 +154,19 @@ _xticklabels = [L"0", L"k_{d}"]
 _yticklabels = [L"0", L"k_{u}"]
 
 with_theme(theme_latexfonts()) do
-    pow = 4
+    pow = 3
     fig = Figure(; size=(700, 600), fontsize=20)
     ax = Axis(fig[1, 1]; aspect=DataAspect(), xlabel=L"k", ylabel=L"k\prime", xticks=(xticks, _xticklabels), yticks=(yticks, _yticklabels))
-    xlims!(ax, (-0.65, 0.65) .+ k_down)
-    ylims!(ax, (-0.65, 0.65) .+ k_up)
-    hm = heatmap!(ax, ks1, ks2, (g2_k) * 10^pow, colorrange=(-5, 5), colormap=:inferno)
+    xlims!(ax, (-0.7, 0.7) .+ k_down)
+    ylims!(ax, (-0.7, 0.7) .+ k_up)
+    hm = heatmap!(ax, ks1, ks2, (g2_k) * 10^pow, colorrange=(-2, 2), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$pow})")
 
     #= lines!(ax, corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=(:black, 0.8), linestyle=(:dash, :loose), label=L"u_{\text{out}} \leftrightarrow d1_{\text{out}}")
+    lines!(ax, corr_down_u1d2 .+ k_down, corr_up_u1d2 .+ k_up, linewidth=4, color=(:black, 0.8), linestyle=(:dash, :loose), label=L"u_{\text{out}} \leftrightarrow d1_{\text{out}}")
 
     lines!(ax, corr_down_u1d1 .+ k_down, -corr_up_u1d1 .+ k_up, linewidth=4, color=(:orange, 0.8), linestyle=(:dash, :loose), label=L"u_{\text{out}}^* \leftrightarrow d1_{\text{out}}")
+    lines!(ax, corr_down_u1d2 .+ k_down, -corr_up_u1d2 .+ k_up, linewidth=4, color=(:orange, 0.8), linestyle=(:dash, :loose), label=L"u_{\text{out}}^* \leftrightarrow d1_{\text{out}}")
 
     lines!(ax, -corr_down_u1d2 .+ k_down, corr_up_u1d2 .+ k_up, linewidth=4, color=(:green, 0.8), linestyle=(:dash, :loose), label=L"u_{\text{out}} \leftrightarrow d2_{\text{out}}^*")
     lines!(ax, -corr_down_u1d1 .+ k_down, corr_up_u1d1 .+ k_up, linewidth=4, color=(:brown, 0.8), linestyle=(:dash, :loose), label=L"u_{\text{out}} \leftrightarrow d1_{\text{out}}^*")
@@ -173,7 +180,7 @@ with_theme(theme_latexfonts()) do
     #scatter!(ax, k_up - 0.3, k_up + 0.15, color=:cyan, markersize=16, label = "?")
     #Legend(fig[1, 3], ax)
 
-    #save(joinpath(saving_dir, "g2_momentum_$window_idx.pdf"), fig)
+    save(joinpath(saving_dir, "g2_momentum_$window_idx.pdf"), fig)
     fig
 end
 ##

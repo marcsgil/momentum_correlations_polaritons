@@ -43,7 +43,7 @@ F_max = 20f0
 
 w_pump = 20f0
 
-decay_time = 100.0f0
+decay_time = 50.0f0
 extra_intensity = 6.0f0
 
 dt = 2.0f-1
@@ -59,13 +59,13 @@ param = (;
 
 u0 = (zeros(complex(typeof(L)), N),)
 prob = GrossPitaevskiiProblem(u0, lengths; dispersion, potential, nonlinearity, pump, param)
-tspan = (0, 2000.0f0)
+tspan = (0, 400.0f0)
 alg = StrangSplitting()
-ts, sol = GeneralizedGrossPitaevskii.solve(prob, alg, tspan; dt, nsaves);
+ts, sol = solve(prob, alg, tspan; dt, nsaves);
 steady_state = map(x -> x[:, end], sol)
 heatmap(xs .- x_def, ts, Array(abs2.(sol[1])))
-plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-300, 300), ylims=(0, 3))
-plot_bistability(xs .- x_def, steady_state[1], param, -200, 200, factor_ns_down=8)
+#plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-300, 300), ylims=(0, 3))
+#plot_bistability(xs .- x_def, steady_state[1], param, -200, 200, factor_ns_down=8)
 ##
 saving_dir = "/Users/marcsgil/LEON/MomentumCorrelations/SupportDownstreamRepulsive"
 

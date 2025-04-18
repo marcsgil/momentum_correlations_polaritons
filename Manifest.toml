@@ -1,6 +1,6 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.4"
+julia_version = "1.11.5"
 manifest_format = "2.0"
 project_hash = "8a86a35424d8928502f6a58f3ed09aef86352ee8"
 
@@ -576,10 +576,10 @@ uuid = "096a3bc2-3ced-46d0-87f4-dd12716f4bfc"
 version = "0.2.0"
 
 [[deps.GeneralizedGrossPitaevskii]]
-deps = ["FFTW", "KernelAbstractions", "LinearAlgebra", "ProgressMeter", "Random", "Reexport", "StaticArrays"]
-git-tree-sha1 = "a5f95014f62ff07280cee44f01848304e240e6f8"
+deps = ["CommonSolve", "FFTW", "KernelAbstractions", "LinearAlgebra", "ProgressMeter", "Random", "Reexport", "StaticArrays"]
+git-tree-sha1 = "6db6cd47974519d16da271297ad19c9bb8e486e3"
 repo-rev = "main"
-repo-url = "https://github.com/marcsgil/GeneralizedGrossPitaevskii.jl"
+repo-url = "https://github.com/marcsgil/GeneralizedGrossPitaevskii.jl.git"
 uuid = "1c32f1f8-fc12-41ee-a188-d96e58f04b51"
 version = "0.1.0"
 
@@ -1156,7 +1156,7 @@ version = "3.2.4+0"
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
-version = "0.8.1+4"
+version = "0.8.5+0"
 
 [[deps.OpenSSL_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
