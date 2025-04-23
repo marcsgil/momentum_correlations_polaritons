@@ -34,7 +34,7 @@ position2idx(x, rs) = argmin(idx -> abs(rs[idx] - x), eachindex(rs))
 function Window(x_begin, x_end, rs, func)
     first_idx = position2idx(x_begin, rs)
     last_idx = position2idx(x_end, rs)
-    N = last_idx - first_idx
+    N = last_idx - first_idx + 1
     window = func(N, eltype(first(rs)))
     Window(window, first_idx)
 end

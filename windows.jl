@@ -4,14 +4,15 @@ include("plot_funcs.jl")
 function hamming(N, ::Type{T}) where {T}
     α = 25 / 46
     β = 1 - α
-    [T(α - β * cospi(2 * n / (N - 1))) for n ∈ 0:N-1]
+    [T(α - β * cospi(2 * n / N)) for n ∈ 0:N-1]
 end
 
 function hann(N, ::Type{T}) where {T}
-    [T(sinpi(n / (N - 1))^2) for n ∈ 0:N-1]
+    [T(sinpi(n / N)^2) for n ∈ 0:N-1]
 end
 
-saving_dir = "/Users/marcsgil/LEON/MomentumCorrelations/SupportDownstreamRepulsive"
+#saving_dir = "/Users/marcsgil/LEON/MomentumCorrelations/SupportDownstreamRepulsive"
+saving_dir = "Results/SupportDownstreamRepulsive1"
 
 steady_state, param = jldopen(joinpath(saving_dir, "steady_state.jld2")) do file
     file["steady_state"], file["param"]

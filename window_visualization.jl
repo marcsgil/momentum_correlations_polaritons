@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.5
+# v0.20.6
 
 using Markdown
 using InteractiveUtils
@@ -37,11 +37,11 @@ function hann(N, ::Type{T}) where {T}
     [T(sinpi(n / N)^2) for n ∈ 0:N-1]
 end
 
+# ╔═╡ 06220843-c2b2-46c3-8f6c-9939ee8fa85e
+func = hann
+
 # ╔═╡ faf88868-350a-4d1b-871f-151aa9181078
 rect(N, ::Type{T}) where {T} = ones(T, N)
-
-# ╔═╡ 06220843-c2b2-46c3-8f6c-9939ee8fa85e
-func = rect
 
 # ╔═╡ c5c6f856-0ce7-47fb-8a20-75aec27def0f
 function blackman_harris(N, ::Type{T}) where {T}
@@ -83,13 +83,13 @@ begin
 end
 
 # ╔═╡ 39c359d1-4cd2-4ba4-91c1-76aacd6d7a19
-window1 = Window(center - width / 2, center + width / 2, xs, func);
+window1 = Window(center - width / 2, center + width / 2, xs, func)
 
 # ╔═╡ 3725c9bd-8d90-4508-84f7-65036f68e351
-dest = similar(complex(window1.window));
+dest = similar(complex(window1.window))
 
 # ╔═╡ 02d658df-c6eb-43f8-955e-943bb32b1e56
-plan = plan_fft!(dest);
+plan = plan_fft!(dest)
 
 # ╔═╡ 977306fe-2044-4f17-804a-e550322fce28
 ks = fftshift(fftfreq(length(window1.window), 2π / param.dx))
@@ -151,7 +151,7 @@ PlutoUI = "~0.7.23"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.4"
+julia_version = "1.11.5"
 manifest_format = "2.0"
 project_hash = "386d4711025fddcc029ca2114480c9e00d888aa2"
 
@@ -1053,7 +1053,7 @@ version = "3.2.4+0"
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
-version = "0.8.1+4"
+version = "0.8.5+0"
 
 [[deps.OpenSSL_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
