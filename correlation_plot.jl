@@ -119,7 +119,7 @@ bracket2 = (k2_min, 0)
 
 corr_d2d2_star, corr_d2d2_star′ = correlate(param1, bracket1, param2, bracket2, 128, true)
 ##
-window_idx = 4
+window_idx = 3
 window1, window2, first_idx1, first_idx2 = jldopen(joinpath(saving_dir, "windows.jld2")) do file
     pair = file["window_pair_$window_idx"]
     pair.first.window,

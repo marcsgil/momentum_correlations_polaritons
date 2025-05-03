@@ -7,10 +7,10 @@ saving_dir = "/home/stagios/Marcos/LEON_Marcos/MomentumCorrelations/Brasil"
 #saving_dir = "/home/marcsgil/Code/LEON/MomentumCorrelations/Brasil"
 batchsize = 10^4
 #batchsize = 100
-nbatches = 800
+nbatches = 10^6
 t_sim = 50.0f0
-show_progress = true
-max_datetime = DateTime(2025, 5, 3, 18, 0)
+show_progress = false
+max_datetime = DateTime(2025, 5, 3, 23, 0)
 array_type = CuArray
 #array_type = Array
 
