@@ -99,7 +99,7 @@ function update_correlations!(position_averages, momentum_averages, n_ave, stead
     io = open(log_path, "w+")
     logger = SimpleLogger(io)
 
-    steps_per_save = GeneralizedGrossPitaevskii.resolve_fixed_timestepping(param.dt, tspan, 1)[2]
+    steps_per_save = GeneralizedGrossPitaevskii.resolve_fixed_timestepping(param.dt, tspan, 1)[3]
     if show_progress
         progress = Progress(steps_per_save * nbatches)
     else
