@@ -3,7 +3,7 @@ include("io.jl")
 include("equations.jl")
 include("correlation_kernels.jl")
 
-saving_dir = "/home/stagios/Marcos/LEON_Marcos/Users/Marcos/MomentumCorrelations/SupportDownstreamRepulsive"
+saving_dir = "/home/stagios/Marcos/LEON_Marcos/MomentumCorrelations/Brasil"
 #saving_dir = "/Volumes/partages/EQ15B/LEON-15B/Users/Marcos/MomentumCorrelations/SupportDownstreamRepulsive"
 batchsize = 10^4
 #batchsize = 100
