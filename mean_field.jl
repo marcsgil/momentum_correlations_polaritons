@@ -5,29 +5,29 @@ include("equations.jl")
 include("plot_funcs.jl")
 
 # Space parameters
-L = 1024.0f0
+L = 1024.0
 lengths = (L,)
 N = 512
 dx = L / N
 xs = StepRangeLen(0, dx, N)
 
 # Polariton parameters
-ħ = 0.6582f0 #meV.ps
-γ = 0.047f0 / ħ
-m = ħ^2 / (2 * 1.29f0) #1 / 6f0 # meV.ps^2/μm^2; This is 3×10^-5 the electron mass
-g = 3f-4 / ħ
-δ₀ = 0.49f0 / ħ
+ħ = 0.6582 #meV.ps
+γ = 0.047 / ħ
+m = 1 / 6 # meV.ps^2/μm^2; This is 3×10^-5 the electron mass
+g = 3e-4 / ħ
+δ₀ = 0.49 / ħ
 
 # Potential parameters
-V_damp = 4.5f0 / ħ
-w_damp = 20.0f0
+V_damp = 4.5 / ħ
+w_damp = 20.0
 x_def = L / 2
-V_def = 0.85f0 / ħ
-w_def = 0.75f0
+V_def = 0.85 / ħ
+w_def = 0.75
 
 # Pump parameters
-k_up = 0.148f0
-k_down = 0.614f0
+k_up = 0.148
+k_down = 0.614
 
 divide = x_def - 7
 
@@ -37,16 +37,16 @@ divide = x_def - 7
 F_sonic_up = γ * √(δ_up / g) / 2
 F_sonic_down = γ * √(δ_down / g) / 2
 
-F_up = F_sonic_up + 0.01f0
-F_down = F_sonic_down + 0.3f0
-F_max = 20f0
+F_up = F_sonic_up + 0.01
+F_down = F_sonic_down + 0.4
+F_max = 20
 
-w_pump = 20f0
+w_pump = 20
 
-decay_time = 50.0f0
-extra_intensity = 6.0f0
+decay_time = 50.0
+extra_intensity = 6.0
 
-dt = 2.0f-1
+dt = 2.0e-1
 nsaves = 512
 
 # Full parameter tuple
@@ -59,22 +59,22 @@ param = (;
 
 u0 = (zeros(complex(typeof(L)), N),)
 prob = GrossPitaevskiiProblem(u0, lengths; dispersion, potential, nonlinearity, pump, param)
-tspan = (0, 400.0f0)
+tspan = (0, 400.0)
 alg = StrangSplitting()
 ts, sol = solve(prob, alg, tspan; dt, nsaves);
 steady_state = map(x -> x[:, end], sol)
 heatmap(xs .- x_def, ts, Array(abs2.(sol[1])))
-#plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-300, 300), ylims=(0, 3))
+plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-300, 300), ylims=(0, 3))
 #plot_bistability(xs .- x_def, steady_state[1], param, -200, 200, factor_ns_down=8)
 ##
-saving_dir = "/Users/marcsgil/LEON/MomentumCorrelations/SupportDownstreamRepulsive"
+saving_dir = "/home/marcsgil/Code/LEON/MomentumCorrelations/Brasil"
 
 plot_density(xs, steady_state[1], param; saving_dir)
 plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-300, 300), ylims=(0, 3), saving_dir)
-plot_bistability(xs .- x_def, steady_state[1], param, -200, 200; saving_dir, factor_ns_down=8)
+plot_bistability(xs .- x_def, steady_state[1], param, -200, 200; saving_dir, factor_ns_down=1000)
 
 ks_up = LinRange(-0.7, 0.7, 512)
 ks_down = LinRange(-1.5, 1.5, 512)
-plot_dispersion(xs .- x_def, steady_state[1], param, -100, 100, 0.4, ks_up, ks_down; saving_dir)
+plot_dispersion(xs .- x_def, steady_state[1], param, -200, 200, 0.4, ks_up, ks_down; saving_dir)
 ##
 save_steady_state(saving_dir, steady_state, param, tspan)

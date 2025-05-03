@@ -11,41 +11,21 @@ function hann(N, ::Type{T}) where {T}
     [T(sinpi(n / N)^2) for n ∈ 0:N-1]
 end
 
-#saving_dir = "/Users/marcsgil/LEON/MomentumCorrelations/SupportDownstreamRepulsive"
-saving_dir = "Results/SupportDownstreamRepulsive1"
+saving_dir = "/home/marcsgil/Code/LEON/MomentumCorrelations/Brasil"
 
 steady_state, param = jldopen(joinpath(saving_dir, "steady_state.jld2")) do file
     file["steady_state"], file["param"]
 end
 xs = StepRangeLen(0, param.dx, param.N) .- param.x_def
 ##
-window1 = Window(0, 150, xs, hann)
-window2 = Window(-150, 0, xs, hann)
-save_window_pair(saving_dir, Pair(window1, window2))
-##
-for func ∈ (hamming, hann)
-    window1 = Window(0, 800, xs, func)
-    window2 = Window(-800, 0, xs, func)
-    save_window_pair(saving_dir, Pair(window1, window2))
-end
-##
-for func ∈ (hamming, hann)
-    window1 = Window(-50, 750, xs, func)
-    window2 = Window(-750, 50, xs, func)
-    save_window_pair(saving_dir, Pair(window1, window2))
-end
-##
-for func ∈ (hamming, hann)
-    window1 = Window(-100, 700, xs, func)
-    window2 = Window(-700, 100, xs, func)
-    save_window_pair(saving_dir, Pair(window1, window2))
-end
-##
-for func ∈ (hamming, hann)
-    window1 = Window(-800, 800, xs, func)
-    window2 = Window(-800, 800, xs, func)
+window_length = 200
+
+for start ∈ (-100, -50, -25, -10, 0)
+    xmin = start
+    xmax = start + window_length
+    window1 = Window(xmin, xmax, xs, hann)
+    window2 = Window(-xmax, -xmin, xs, hann)
     save_window_pair(saving_dir, Pair(window1, window2))
 end
 ##
 plot_all_windows(saving_dir, savefig=true)
-##
