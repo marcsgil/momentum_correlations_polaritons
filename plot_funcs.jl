@@ -21,11 +21,13 @@ end
 
 function plot_velocities!(ax, rs, field, param; xlims=nothing, ylims=nothing)
     v = velocity(Array(field), param.ħ, param.m, param.dx)
-    c = Array(@. sqrt(ħ * g * abs2(field) / m))
+
+    ks = diff(unwrap(angle.(steady_state[1]))) / param.dx
+    c = map((ψ, k) -> speed_of_sound(abs2(ψ), param.g, param.δ₀, k, param.ħ, param.m), Array(field)[begin+1:end], ks)
 
     !isnothing(xlims) && xlims!(ax, xlims...)
     !isnothing(ylims) && ylims!(ax, ylims...)
-    lines!(ax, rs, c, linewidth=4, color=:blue, label=L"c")
+    lines!(ax, rs[begin+1:end], c, linewidth=4, color=:blue, label=L"c")
     lines!(ax, rs[begin+1:end], v, linewidth=4, color=:red, label=L"v")
     axislegend(; position=:lt)
 end
@@ -33,7 +35,7 @@ end
 function plot_velocities(rs, field, param; xlims=nothing, ylims=nothing, fontsize=20, saving_dir=nothing)
     with_theme(theme_latexfonts()) do
         fig = Figure(; fontsize)
-        ax = Axis(fig[1, 1], xlabel=L"x")
+        ax = Axis(fig[1, 1], xlabel=L"x \ (\mu \text{m})", ylabel = L"\mu \text{m} / \text{ps}")
         plot_velocities!(ax, rs, field, param; xlims, ylims)
         isnothing(saving_dir) || save(joinpath(saving_dir, "velocities.pdf"), fig)
         fig
@@ -46,25 +48,25 @@ function plot_bistability!(ax1, ax2, rs, steady_state, param, x_up, x_down, fact
     n_up = abs2(Array(steady_state)[idx_up])
     n_down = abs2(Array(steady_state)[idx_down])
 
-    δ_up = δ₀ - param.ħ * param.k_up^2 / (2 * param.m)
-    δ_down = δ₀ - param.ħ * param.k_down^2 / (2 * param.m)
+    δ_up = param.δ₀ - param.ħ * param.k_up^2 / (2 * param.m)
+    δ_down = param.δ₀ - param.ħ * param.k_down^2 / (2 * param.m)
 
-    ns_up_theo = LinRange(0, factor_ns_up * δ_up / g, 512)
+    ns_up_theo = LinRange(0, factor_ns_up * δ_up / param.g, 512)
     Is_up_theo = eq_of_state.(ns_up_theo, param.g, param.δ₀, param.k_up, param.ħ, param.m, param.γ)
-    ns_down_theo = LinRange(0, factor_ns_down * δ_down / g, 512)
+    ns_down_theo = LinRange(0, factor_ns_down * δ_down / param.g, 512)
     Is_down_theo = eq_of_state.(ns_down_theo, param.g, param.δ₀, param.k_down, param.ħ, param.m, param.γ)
 
-    lines!(ax1, Is_up_theo, ns_up_theo, color=:blue, linewidth=4)
-    lines!(ax2, Is_down_theo, ns_down_theo, color=:red, linewidth=4)
-    scatter!(ax1, abs2(param.F_up), n_up, color=:black, markersize=16)
-    scatter!(ax2, abs2(param.F_down), n_down, color=:black, markersize=16)
+    lines!(ax1, 10^3 * param.ħ^3 * param.g * Is_up_theo, param.ħ * param.g * ns_up_theo, color=:blue, linewidth=4)
+    lines!(ax2, 10^3 * param.ħ^3 * param.g * Is_down_theo, param.ħ * param.g * ns_down_theo, color=:red, linewidth=4)
+    scatter!(ax1, 10^3 * param.ħ^3 * param.g * abs2(param.F_up), param.ħ * param.g * n_up, color=:black, markersize=16)
+    scatter!(ax2, 10^3 * param.ħ^3 * param.g * abs2(param.F_down), param.ħ * param.g * n_down, color=:black, markersize=16)
 end
 
 function plot_bistability(rs, steady_state, param, x_up, x_down; factor_ns_up=1.2, factor_ns_down=3, saving_dir=nothing)
     with_theme(theme_latexfonts()) do
-        fig = Figure(fontsize=16)
-        ax1 = Axis(fig[1, 1]; xlabel="I", ylabel="n", title="Upstream")
-        ax2 = Axis(fig[1, 2]; xlabel="I", ylabel="n", title="Downstream")
+        fig = Figure(fontsize=20)
+        ax1 = Axis(fig[1, 1]; xlabel=L"\hbar^3 g I \times 10^3 \ (meV^3)", ylabel=L"\hbar g n \ (meV)", title="Upstream")
+        ax2 = Axis(fig[1, 2]; xlabel=L"\hbar^3 g I \times 10^3 \ (meV^3)", ylabel=L"\hbar g n \ (meV)", title="Downstream")
         plot_bistability!(ax1, ax2, rs, steady_state, param, x_up, x_down, factor_ns_up, factor_ns_down)
         isnothing(saving_dir) || save(joinpath(saving_dir, "bistability.pdf"), fig)
         fig
@@ -143,8 +145,8 @@ end
 function plot_dispersion(rs, steady_state, param, x_up, x_down, Ω, ks_up, ks_down; saving_dir=nothing)
     with_theme(theme_latexfonts()) do
         fig = Figure(fontsize=20, size=(800, 400))
-        ax1 = Axis(fig[1, 1]; xlabel=L"\delta k", ylabel=L"\delta \omega", title="Upstream")
-        ax2 = Axis(fig[1, 2]; xlabel=L"\delta k", title="Downstream")
+        ax1 = Axis(fig[1, 1]; xlabel=L"q \ (\mu \text{m}^{-1})", ylabel=L"\delta \omega \ (ps^{-1})", title="Upstream")
+        ax2 = Axis(fig[1, 2]; xlabel=L"q \ (\mu \text{m}^{-1})", title="Downstream")
 
         hideydecorations!(ax2, grid=false)
         ylims!(ax1, (-1, 1))

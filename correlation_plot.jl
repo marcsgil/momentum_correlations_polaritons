@@ -32,7 +32,7 @@ xs = StepRangeLen(0, dx, N) .- param.x_def
 with_theme(theme_latexfonts()) do
     pow = 5
     fig = Figure(; size=(730, 600), fontsize=20)
-    ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"x", ylabel=L"x\prime")
+    ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"x \ (\mu \text{m})", ylabel=L"x\prime \ (\mu \text{m})")
     xlims!(ax, (-150, 150))
     ylims!(ax, (-150, 150))
     hm = heatmap!(ax, xs, xs, g2_r * 10^pow, colorrange=(-6, 6), colormap=:inferno)
@@ -42,8 +42,8 @@ with_theme(theme_latexfonts()) do
 end
 ##
 n = abs2.(steady_state[1])
-n_up = n[argmin(abs.(xs .+ 500))]
-n_down = n[argmin(abs.(xs .- 500))]
+n_up = n[argmin(abs.(xs .+ 200))]
+n_down = n[argmin(abs.(xs .- 200))]
 
 param_up = (n_up, param.g, param.δ₀, param.k_up, param.ħ, param.m)
 param_down = (n_down, param.g, param.δ₀, param.k_down, param.ħ, param.m)
