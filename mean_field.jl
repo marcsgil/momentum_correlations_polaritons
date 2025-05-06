@@ -64,10 +64,10 @@ alg = StrangSplitting()
 ts, sol = solve(prob, alg, tspan; dt, nsaves);
 steady_state = map(x -> x[:, end], sol)
 heatmap(xs .- x_def, ts, Array(abs2.(sol[1])))
-plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-300, 300), ylims=(0, 3))
+#plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-300, 300), ylims=(0, 3))
 #plot_bistability(xs .- x_def, steady_state[1], param, -200, 200, factor_ns_down=8)
 ##
-saving_dir = "/home/marcsgil/Code/LEON/MomentumCorrelations/Brasil"
+saving_dir = "/home/marcsgil/Code/LEON/MomentumCorrelations/150_100um_window"
 
 plot_density(xs, steady_state[1], param; saving_dir)
 plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-300, 300), ylims=(0, 3), saving_dir)

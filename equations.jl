@@ -1,15 +1,18 @@
 using KernelAbstractions
 
 function dispersion(ks, param)
-    -im * param.γ / 2 + param.ħ * sum(abs2, ks) / 2param.m - param.δ₀
+    param.ħ * sum(abs2, ks) / 2param.m - param.δ₀
 end
 
 gaussian(x, center, width) = exp(-((x - center) / width)^2)
 
+function loss(xs, param)
+    param.γ / 2 + param.V_damp * (gaussian(xs[1], zero(xs[1]), param.w_damp) +
+                                  gaussian(xs[1], param.L, param.w_damp))
+end
+
 function potential(xs, param)
-    param.V_def * gaussian(xs[1], param.x_def, param.w_def) -
-    im * param.V_damp * (gaussian(xs[1], zero(xs[1]), param.w_damp) +
-                         gaussian(xs[1], param.L, param.w_damp))
+    param.V_def * gaussian(xs[1], param.x_def, param.w_def) - im * loss(xs, param)
 end
 
 function half_pump(x, Fmax, Fmin, k, w, x0)
@@ -34,7 +37,7 @@ end
 
 nonlinearity(ψ, param) = param.g * (abs2(first(ψ)) - 1 / param.dx)
 
-noise_func(ψ, param) = √(param.γ / 2 / param.dx)
+position_noise_func(ψ, xs, param) = √(loss(xs, param) / param.dx)
 
 function calculate_momentum_commutators(window1, window2, first_idx1, first_idx2, dx)
     c11 = sum(abs2, window1) / dx
