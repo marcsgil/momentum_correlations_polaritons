@@ -5,7 +5,7 @@ include("polariton_funcs.jl")
 include("equations.jl")
 include("plot_funcs.jl")
 
-saving_dir = "/home/marcsgil/Code/LEON/MomentumCorrelations/150_100um_window"
+saving_dir = "/home/marcsgil/Code/LEON/MomentumCorrelations/full_sim/"
 
 steady_state, param, t_steady_state = jldopen(joinpath(saving_dir, "steady_state.jld2")) do file
     file["steady_state"],
@@ -119,7 +119,7 @@ bracket2 = (k2_min, 0)
 
 corr_d2d2_star, corr_d2d2_star′ = correlate(param1, bracket1, param2, bracket2, 128, true)
 ##
-window_idx = 8
+window_idx = 1
 window1, window2, first_idx1, first_idx2 = jldopen(joinpath(saving_dir, "windows.jld2")) do file
     pair = file["window_pair_$window_idx"]
     pair.first.window,
@@ -134,8 +134,6 @@ momentum_averages = jldopen(joinpath(saving_dir, "averages.jld2")) do file
     file["momentum_averages_$window_idx"]
 end
 
-xs[first_idx1], xs[first_idx1 + length(window1) - 1]
-
 param.k_up
 param.k_down
 
@@ -143,6 +141,8 @@ g2_k = fftshift(calculate_g2m1(momentum_averages, commutators_k))
 
 ks1 = fftshift(fftfreq(length(window1), 2π / dx))
 ks2 = fftshift(fftfreq(length(window2), 2π / dx))
+
+fftfreq(length(window1), 2π / dx)[6]
 
 k_up = param.k_up
 k_down = param.k_down

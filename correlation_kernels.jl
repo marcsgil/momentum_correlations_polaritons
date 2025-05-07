@@ -81,12 +81,20 @@ function get_ft_buffers(window_pair, batchsize, steady_state)
     ft_sol1, ft_sol2, plan1, plan2
 end
 
+_randn!(::Nothing, args...) = randn!(args...)
+_randn!(args...) = randn!(args...)
+
 function update_correlations!(position_averages, momentum_averages, n_ave, steady_state, param, window_pairs, batchsize, nbatches, tspan;
     show_progress=true, noise_eltype=eltype(first(steady_state)), log_path="log.txt", max_datetime=typemax(DateTime),
     rng=nothing, kwargs...)
 
     u0 = map(steady_state) do x
         stack(x for _ ∈ 1:batchsize)
+    end
+
+    for x ∈ steady_state
+        _randn!(rng, x)
+        x ./= sqrt(2param.dx)
     end
 
     noise_prototype = similar.(u0, noise_eltype)
@@ -150,7 +158,8 @@ function update_correlations!(saving_dir, batchsize, nbatches, t_sim; array_type
 
     position_averages, momentum_averages, n_ave = read_averages(saving_dir, T)
 
-    tspan = (t_steady_state, t_steady_state + t_sim)
+    #tspan = (t_steady_state, t_steady_state + t_sim)
+    tspan = (zero(t_steady_state), t_steady_state)
 
     position_averages, momentum_averages, n_ave = update_correlations!(
         position_averages, momentum_averages, n_ave, steady_state, param, window_pairs, batchsize, nbatches, tspan; param, kwargs...)

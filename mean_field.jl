@@ -26,8 +26,8 @@ V_def = 0.85 / ħ
 w_def = 0.75
 
 # Pump parameters
-k_up = 0.148
-k_down = 0.614
+k_up = (2π / 200) * 5
+k_down = (2π / 200) * 19
 
 divide = x_def - 7
 
@@ -37,8 +37,8 @@ divide = x_def - 7
 F_sonic_up = γ * √(δ_up / g) / 2
 F_sonic_down = γ * √(δ_down / g) / 2
 
-F_up = F_sonic_up + 0.01
-F_down = F_sonic_down + 0.4
+F_up = F_sonic_up 
+F_down = F_sonic_down
 F_max = 20
 
 w_pump = 20
@@ -64,14 +64,14 @@ alg = StrangSplitting()
 ts, sol = solve(prob, alg, tspan; dt, nsaves);
 steady_state = map(x -> x[:, end], sol)
 heatmap(xs .- x_def, ts, Array(abs2.(sol[1])))
-#plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-300, 300), ylims=(0, 3))
-#plot_bistability(xs .- x_def, steady_state[1], param, -200, 200, factor_ns_down=8)
+plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-300, 300), ylims=(0, 3))
+#plot_bistability(xs .- x_def, steady_state[1], param, -200, 200, factor_ns_down=1.2)
 ##
-saving_dir = "/home/marcsgil/Code/LEON/MomentumCorrelations/150_100um_window"
+saving_dir = "/home/marcsgil/Code/LEON/MomentumCorrelations/full_sim/"
 
 plot_density(xs, steady_state[1], param; saving_dir)
-plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-300, 300), ylims=(0, 3), saving_dir)
-plot_bistability(xs .- x_def, steady_state[1], param, -200, 200; saving_dir, factor_ns_down=1000)
+plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-200, 200), ylims=(0, 3), saving_dir)
+plot_bistability(xs .- x_def, steady_state[1], param, -200, 200; saving_dir, factor_ns_down=1.2)
 
 ks_up = LinRange(-0.7, 0.7, 512)
 ks_down = LinRange(-1.5, 1.5, 512)
