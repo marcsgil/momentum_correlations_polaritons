@@ -9,7 +9,7 @@ function plot_density!(ax, rs, field, param; xlims=nothing, ylims=nothing)
     !isnothing(ylims) && ylims!(ax, ylims...)
 end
 
-function plot_density(rs, field, param; xlims=nothing, ylims=nothing, fontsize=20, saving_dir=nothing)
+function plot_density(rs, field, param; xlims=nothing, ylims=nothing, fontsize=24, saving_dir=nothing)
     with_theme(theme_latexfonts()) do
         fig = Figure(; fontsize)
         ax = Axis(fig[1, 1], xlabel=L"x", ylabel=L"gn")
@@ -19,7 +19,7 @@ function plot_density(rs, field, param; xlims=nothing, ylims=nothing, fontsize=2
     end
 end
 
-function plot_velocities!(ax, rs, field, param; xlims=nothing, ylims=nothing)
+function plot_velocities!(ax, rs, field, param; xlims=nothing, ylims=nothing, show_legend=true)
     v = velocity(Array(field), param.ħ, param.m, param.dx)
 
     ks = diff(unwrap(angle.(steady_state[1]))) / param.dx
@@ -29,13 +29,13 @@ function plot_velocities!(ax, rs, field, param; xlims=nothing, ylims=nothing)
     !isnothing(ylims) && ylims!(ax, ylims...)
     lines!(ax, rs[begin+1:end], c, linewidth=4, color=:blue, label=L"c")
     lines!(ax, rs[begin+1:end], v, linewidth=4, color=:red, label=L"v")
-    axislegend(; position=:lt)
+    show_legend && axislegend(; position=:lt)
 end
 
-function plot_velocities(rs, field, param; xlims=nothing, ylims=nothing, fontsize=20, saving_dir=nothing)
+function plot_velocities(rs, field, param; xlims=nothing, ylims=nothing, fontsize=24, saving_dir=nothing)
     with_theme(theme_latexfonts()) do
         fig = Figure(; fontsize)
-        ax = Axis(fig[1, 1], xlabel=L"x \ (\mu \text{m})", ylabel = L"\mu \text{m} / \text{ps}")
+        ax = Axis(fig[1, 1], xlabel=L"x \ (\mu \text{m})", ylabel=L"\mu \text{m} / \text{ps}")
         plot_velocities!(ax, rs, field, param; xlims, ylims)
         isnothing(saving_dir) || save(joinpath(saving_dir, "velocities.pdf"), fig)
         fig
@@ -64,7 +64,7 @@ end
 
 function plot_bistability(rs, steady_state, param, x_up, x_down; factor_ns_up=1.2, factor_ns_down=3, saving_dir=nothing)
     with_theme(theme_latexfonts()) do
-        fig = Figure(fontsize=20)
+        fig = Figure(fontsize=24)
         ax1 = Axis(fig[1, 1]; xlabel=L"\hbar^3 g I \times 10^3 \ (meV^3)", ylabel=L"\hbar g n \ (meV)", title="Upstream")
         ax2 = Axis(fig[1, 2]; xlabel=L"\hbar^3 g I \times 10^3 \ (meV^3)", ylabel=L"\hbar g n \ (meV)", title="Downstream")
         plot_bistability!(ax1, ax2, rs, steady_state, param, x_up, x_down, factor_ns_up, factor_ns_down)
@@ -115,11 +115,11 @@ function plot_dispersion!(ax1, ax2, rs, steady_state, param, x_up, x_down, Ω, k
     end
 
     scatter!(ax1, k_up_out, Ω, color=:black, markersize=16)
-    text!(ax1, k_up_out, Ω, text=L"u_\text{out}", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
+    text!(ax1, k_up_out, Ω, text=L"u_\text{out}", fontsize=24, align=(:right, :top), offset=(10, 0))
     scatter!(ax1, k_up_in, Ω, color=:black, markersize=16)
-    text!(ax1, k_up_in, Ω, text=L"u_\text{in}", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
+    text!(ax1, k_up_in, Ω, text=L"u_\text{in}", fontsize=24, align=(:left, :top), offset=(10, 0))
     scatter!(ax1, k_star_up_out, -Ω, color=:black, markersize=16)
-    text!(ax1, k_star_up_out, -Ω, text=L"u_\text{out}^*", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
+    text!(ax1, k_star_up_out, -Ω, text=L"u_\text{out}^*", fontsize=24, align=(:left, :bottom), offset=(5, 0))
     scatter!(ax1, k_star_up_in, -Ω, color=:black, markersize=16)
     text!(ax1, k_star_up_in, -Ω, text=L"u_\text{in}^*", fontsize=24, align=(:right, :bottom), offset=(-10, 0))
 
@@ -144,7 +144,7 @@ end
 
 function plot_dispersion(rs, steady_state, param, x_up, x_down, Ω, ks_up, ks_down; saving_dir=nothing)
     with_theme(theme_latexfonts()) do
-        fig = Figure(fontsize=20, size=(800, 400))
+        fig = Figure(fontsize=24, size=(800, 450))
         ax1 = Axis(fig[1, 1]; xlabel=L"q \ (\mu \text{m}^{-1})", ylabel=L"\delta \omega \ (ps^{-1})", title="Upstream")
         ax2 = Axis(fig[1, 2]; xlabel=L"q \ (\mu \text{m}^{-1})", title="Downstream")
 
@@ -157,10 +157,10 @@ function plot_dispersion(rs, steady_state, param, x_up, x_down, Ω, ks_up, ks_do
     end
 end
 
-function plot_window_pair(saving_dir, n, pair, steady_state, rs; xlims=nothing, ylims=nothing, savefig=false)
+function plot_window_pair(saving_dir, n, pair, steady_state, rs, param; xlims=nothing, ylims=nothing, savefig=false)
     with_theme(theme_latexfonts()) do
-        fig = Figure(fontsize=20)
-        ax = Axis(fig[1, 1]; xlabel=L"x")
+        fig = Figure(fontsize=24, size=(550,450))
+        ax = Axis(fig[1, 1], xlabel=L"x \ (\mu \text{m})")
         isnothing(xlims) || xlims!(ax, xlims...)
         isnothing(ylims) || ylims!(ax, ylims...)
 
@@ -172,9 +172,10 @@ function plot_window_pair(saving_dir, n, pair, steady_state, rs; xlims=nothing, 
         N2 = length(window2)
         linewidth = 4
 
-        lines!(ax, rs, abs2.(steady_state[1]); linewidth, label="|ψ|²", color=:black)
-        lines!(ax, rs[first_idx1:first_idx1+N1-1], window1 * maximum(abs2, steady_state[1]) / maximum(abs2, window1); linewidth, label="Window1", linestyle=:dash)
-        lines!(ax, rs[first_idx2:first_idx2+N2-1], window2 * maximum(abs2, steady_state[1]) / maximum(abs2, window2); linewidth, label="Window2", linestyle=:dot)
+        lines!(ax, rs[first_idx1:first_idx1+N1-1], window1 ; linewidth, label=L"k \text{ Window}", linestyle=:dash)
+        lines!(ax, rs[first_idx2:first_idx2+N2-1], window2; linewidth, label=L"k^\prime \text{ Window}", linestyle=:dot)
+        #plot_velocities!(ax, rs, steady_state[1], param; xlims, ylims, show_legend=false)
+        #Legend(fig[1, 2], ax)
         axislegend(ax)
         display(fig)
 
@@ -187,7 +188,7 @@ function plot_all_windows(saving_dir; kwargs...)
     steady_state, param = read_steady_state(saving_dir)
     rs = StepRangeLen(0, param.dx, param.N) .- param.x_def
     for (n, pair) in enumerate(window_pairs)
-        plot_window_pair(saving_dir, n, pair, steady_state, rs; kwargs...)
+        plot_window_pair(saving_dir, n, pair, steady_state, rs, param; kwargs...)
     end
     nothing
 end

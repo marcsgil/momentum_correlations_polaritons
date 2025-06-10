@@ -11,16 +11,16 @@ function hann(N, ::Type{T}) where {T}
     [T(sinpi(n / N)^2) for n ∈ 0:N-1]
 end
 
-saving_dir = "/home/marcsgil/Code/LEON/MomentumCorrelations/full_sim"
+saving_dir = "/home/marcsgil/Code/LEON/MomentumCorrelations/full_sim2"
 
 steady_state, param = jldopen(joinpath(saving_dir, "steady_state.jld2")) do file
     file["steady_state"], file["param"]
 end
 xs = StepRangeLen(0, param.dx, param.N) .- param.x_def
 ##
-window_length = 600
+window_length = 500
 
-for start ∈ (-300, )
+for start ∈ (-250, )
     xmin = start
     xmax = start + window_length
     window1 = Window(xmin, xmax, xs, hann)
@@ -28,4 +28,4 @@ for start ∈ (-300, )
     save_window_pair(saving_dir, Pair(window1, window2))
 end
 ##
-plot_all_windows(saving_dir, savefig=true)
+plot_all_windows(saving_dir, savefig=true, xlims=(-300, 300))
