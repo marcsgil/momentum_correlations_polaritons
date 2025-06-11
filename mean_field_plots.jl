@@ -1,4 +1,4 @@
-using JLD2, MakieExtra
+using JLD
 
 include("plot_funcs.jl")
 include("io.jl")
