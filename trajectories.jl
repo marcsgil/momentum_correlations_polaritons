@@ -1,4 +1,4 @@
-using CairoMakie, JLD2, Integrals, Interpolations, Roots, Polynomials, NonlinearSolve, LsqFit, DifferentialEquations
+using CairoMakie, JLD2, Interpolations, Polynomials, LsqFit, DifferentialEquations
 include("polariton_funcs.jl")
 
 function model(x, p)
@@ -13,7 +13,7 @@ function get_fitted_model(xs, ys, y₋, y₊, p0)
 end
 
 function build_interpolations(steady_state, param, xmin, xmax)
-    xs = (StepRangeLen(0, param.dx, param.N - 1) .- param.x_def)
+    xs = StepRangeLen(0, param.dx, param.N - 1) .- param.x_def
     ns = abs2.(steady_state[1][2:end])
     ks = diff(unwrap(angle.(steady_state[1]))) / param.dx
     cs = map((n, k) -> speed_of_sound(n, param.g, param.δ₀, k, param.ħ, param.m), ns, ks)
@@ -123,7 +123,7 @@ vg3 = cubic_spline_interpolation(xs[idx_turn:end], vcat(0, vs[3, idx_turn+1:end]
 vg4 = cubic_spline_interpolation(xs[idx_turn:end], vcat(0, vs[4, idx_turn+1:end]), extrapolation_bc=Flat())
 ##
 fig = Figure(size=(800, 600), fontsize=24)
-ax = Axis(fig[1, 1], ylabel=L"x \ (\mu \text{m})", xlabel=L"t \ (\text{ps})")
+ax = Axis(fig[1, 1], xlabel=L"x \ (\mu \text{m})", ylabel=L"t \ (\text{ps})")
 
 f(x, p, t) = vg4(x)
 u0 = x_turn * 0.999
@@ -132,7 +132,8 @@ tspan = (0.0, 5)
 prob = ODEProblem(f, u0, tspan)
 sol4 = solve(prob, Tsit5(), reltol = 1e-8, abstol = 1e-8)
 
-lines!(ax, sol3.t, sol3.u, linewidth=2, color=:red)
+lines!(ax, sol4.u, sol4.t, linewidth=2, color=:red, linestyle=:dash)
+fig
 
 f(x, p, t) = vg3(x)
 u0 = sol4.u[end]
@@ -140,7 +141,7 @@ u0 = sol4.u[end]
 tspan = (-sol4.t[end], 0)
 prob = ODEProblem(f, u0, tspan)
 sol3 = solve(prob, Tsit5(), reltol = 1e-8, abstol = 1e-8)
-lines!(ax, sol4.t, sol4.u, linewidth=2, color=:blue)
+lines!(ax, sol3.u, sol3.t, linewidth=2, color=:red)
 
 f(x, p, t) = vg1(x)
 u0 = x_turn * 0.999
@@ -148,12 +149,12 @@ u0 = x_turn * 0.999
 tspan = (0, 3)
 prob = ODEProblem(f, u0, tspan)
 sol1 = solve(prob, Tsit5(), reltol = 1e-8, abstol = 1e-8)
-lines!(ax, sol1.t, sol1.u, linewidth=2, color=:green)
+lines!(ax, sol1.u, sol1.t, linewidth=2, color=:green)
 
 tspan = (0, -3)
 prob = ODEProblem(f, u0, tspan)
 sol1 = solve(prob, Tsit5(), reltol = 1e-8, abstol = 1e-8)
-lines!(ax, sol1.t, sol1.u, linewidth=2, color=:green)
+lines!(ax, sol1.u, sol1.t, linewidth=2, color=:green)
 
 f(x, p, t) = vg2(x)
 u0 = x_turn * 0.999
@@ -161,11 +162,11 @@ u0 = x_turn * 0.999
 tspan = (0, 3)
 prob = ODEProblem(f, u0, tspan)
 sol2 = solve(prob, Tsit5(), reltol = 1e-8, abstol = 1e-8)
-lines!(ax, sol2.t, sol2.u, linewidth=2, color=:black)
+lines!(ax, sol2.u, sol2.t, linewidth=2, color=:blue)
 
 tspan = (0, -3)
 prob = ODEProblem(f, u0, tspan)
 sol2 = solve(prob, Tsit5(), reltol = 1e-8, abstol = 1e-8)
-lines!(ax, sol2.t, sol2.u, linewidth=2, color=:black)
+lines!(ax, sol2.u, sol2.t, linewidth=2, color=:blue)
 
 fig
