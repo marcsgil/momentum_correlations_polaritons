@@ -39,11 +39,20 @@ steady_state, param = jldopen(joinpath(saving_dir, "steady_state.jld2")) do file
     file["param"]
 end
 
-K_itp, c_itp, μ²_itp = build_interpolations(steady_state, param, -100, 100)
+xs = StepRangeLen(0, param.dx, param.N)
+idx_min = findfirst(x -> x - param.x_def >= -200, xs)
+idx_max = findlast(x -> x - param.x_def <= 200, xs)
+idxs = idx_min:idx_max
+xs = xs[idxs]
+steady_state = steady_state[1][idxs]
 
-xs = LinRange(-50, 50, 512)
+Ks = wavenumber(steady_state, param.dx)
+cs = map((ψ, k, x) -> speed_of_sound(abs2(ψ), param.g, param.δ₀, k, param.ħ, param.m), steady_state, Ks, xs)
+μ²s = map((ψ, k, x) -> mass_term(abs2(ψ), param.g, param.δ₀, k, param.ħ, param.m), steady_state, Ks, xs)
 
-lines(xs, c_itp(xs))
+μ²s[argmax(μ²s)] = NaN
+
+lines(μ²s)
 ##
 δω = 0.6
 
