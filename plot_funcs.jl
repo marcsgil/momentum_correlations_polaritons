@@ -22,13 +22,13 @@ end
 function plot_velocities!(ax, rs, field, param; xlims=nothing, ylims=nothing, show_legend=true)
     v = velocity(Array(field), param.ħ, param.m, param.dx)
 
-    ks = diff(unwrap(angle.(steady_state[1]))) / param.dx
-    c = map((ψ, k) -> speed_of_sound(abs2(ψ), param.g, param.δ₀, k, param.ħ, param.m), Array(field)[begin+1:end], ks)
+    ks = wavenumber(field, param.dx)
+    c = map((ψ, k) -> speed_of_sound(abs2(ψ), param.g, param.δ₀, k, param.ħ, param.m), Array(field), ks)
 
     !isnothing(xlims) && xlims!(ax, xlims...)
     !isnothing(ylims) && ylims!(ax, ylims...)
-    lines!(ax, rs[begin+1:end], c, linewidth=4, color=:blue, label=L"c")
-    lines!(ax, rs[begin+1:end], v, linewidth=4, color=:red, label=L"v")
+    lines!(ax, rs, c, linewidth=4, color=:blue, label=L"c")
+    lines!(ax, rs, v, linewidth=4, color=:red, label=L"v")
     show_legend && axislegend(; position=:lt)
 end
 
