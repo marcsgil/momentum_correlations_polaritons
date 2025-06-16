@@ -1,4 +1,4 @@
-using KernelAbstractions
+using KernelAbstractions, FFTW
 
 function dispersion(ks, param)
     param.ħ * sum(abs2, ks) / 2param.m - param.δ₀
