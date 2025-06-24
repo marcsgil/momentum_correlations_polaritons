@@ -183,7 +183,7 @@ with_theme(theme_latexfonts()) do
 
     # Velocities
     gc = g_bottom[1, 1] = GridLayout()
-    axc = Axis(gc[1, 1], xlabel=L"x \ (\mu \text{m})", ylabel=L"\mu \text{m} / \text{ps}")
+    axc = Axis(gc[1, 1], xlabel=L"x - x_H \ (\mu \text{m})", ylabel=L"\mu \text{m} / \text{ps}")
 
     xs_vel = LinRange(-100, 100, 512)
     lines!(axc, xs_vel, ħ * K_itp(xs_vel) / m; linewidth, color=:orangered)
@@ -191,7 +191,7 @@ with_theme(theme_latexfonts()) do
 
     # Trajectories
     gd = g_bottom[1, 2] = GridLayout()
-    axd = Axis(gd[1, 1], xlabel=L"x \ (\mu \text{m})", ylabel=L"t \ (\text{ps})")
+    axd = Axis(gd[1, 1], xlabel=L"x - x_H \ (\mu \text{m})", ylabel=L"t \ (\text{ps})")
     xs_traj = LinRange(-20, 20, 2^15)
     vgs = fill(NaN, 4, length(xs_traj))
 
@@ -240,7 +240,7 @@ with_theme(theme_latexfonts()) do
     xs_corr = StepRangeLen(0, param.dx, param.N) .- param.x_def
     ge = g_bottom[1, 3] = GridLayout()
     pow = 5
-    axe = Axis(ge[1, 1], aspect=DataAspect(), xlabel=L"x \ (\mu \text{m})", ylabel=L"x\prime \ (\mu \text{m})")
+    axe = Axis(ge[1, 1], aspect=DataAspect(), xlabel=L"x - x_H \ (\mu \text{m})", ylabel=L"x\prime - x_H  \ (\mu \text{m})")
     xlims!(axe, -140, 140)
     ylims!(axe, -140, 140)
     hm = heatmap!(axe, xs_corr, xs_corr, g2_r * 10^pow, colorrange=(-6, 6), colormap=:inferno)
