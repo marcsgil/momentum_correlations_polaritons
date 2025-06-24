@@ -247,7 +247,7 @@ with_theme(theme_latexfonts()) do
     Colorbar(ge[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$pow})")
     fig
 
-    for (label, layout) in zip(["(A)", "(B)", "(C)", "(D)", "(E)"], [ga, gb, gc, gd, ge])
+    for (label, layout) in zip(["(a)", "(b)", "(c)", "(d)", "(e)"], [ga, gb, gc, gd, ge])
         Label(layout[1, 1, TopLeft()], label,
             fontsize=26,
             padding=(0, 50, 20, 0),

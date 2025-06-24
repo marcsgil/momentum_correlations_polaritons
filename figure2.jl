@@ -22,17 +22,18 @@ g2_k = [fftshift(calculate_g2m1(momentum_average, commutator)) for (momentum_ave
 ks = [fftshift(fftfreq(length(first(win).window), 2π / param.dx)) for win in window_pairs]
 
 with_theme(theme_latexfonts()) do
-    fig = Figure(; size=(1000, 1000), fontsize=16)
+    fig = Figure(; size=(900, 450), fontsize=14)
 
-    g_top = fig[1, 1] = GridLayout()
-    g_bottom = fig[2, 1] = GridLayout()
+    g = fig.layout
+    g_top = g[1, 1] = GridLayout()
+    g_bottom = g[2, 1] = GridLayout()
 
-    # Windows 
+    # Windows
     g_windows = g_top[1, 1] = GridLayout()
     ga = g_windows[1, 1] = GridLayout()
-    gb = g_windows[2, 1] = GridLayout()
-    axa = Axis(ga[1, 1], ylabel="(a. u.)")
-    axb = Axis(gb[1, 1], xlabel=L"x \ (\mu \text{m})", ylabel="(a. u.)")
+    gb = g_windows[1, 2] = GridLayout()
+    axa = Axis(ga[1, 1], xlabel=L"x - x_H \ (\mu \text{m})", ylabel="(a. u.)")
+    axb = Axis(gb[1, 1], xlabel=L"x - x_H \ (\mu \text{m})", ylabel="(a. u.)")
 
     for (ax, pair) in zip([axb, axa], window_pairs)
         window1 = first(pair).window
@@ -44,14 +45,13 @@ with_theme(theme_latexfonts()) do
         lines!(ax, xs[first_idx2:first_idx2+length(window2)-1], window2, color=:red, linewidth=4, linestyle=:dot)
     end
 
-    hidexdecorations!(axa; grid=false)
-    rowgap!(g_windows, 20)
+    #hidexdecorations!(axa; grid=false)
 
     linkxaxes!(axb, axa)
 
     # Correlations Large Windows
     pow = 3
-    gc = g_top[1, 2] = GridLayout()
+    gc = g_bottom[1, 1] = GridLayout()
 
     axc = Axis(gc[1, 1]; aspect=DataAspect(),
         xlabel=L"k \ (\mu \text{m}^{-1})", ylabel=L"k\prime \ (\mu \text{m}^{-1})")
@@ -61,7 +61,7 @@ with_theme(theme_latexfonts()) do
     vlines!(axc, param.k_down, color=:deepskyblue, linestyle=:dashdot)
 
     # Correlations Small Windows
-    gd = g_bottom[1, 1] = GridLayout()
+    gd = g_bottom[1, 2] = GridLayout()
     axd = Axis(gd[1, 1]; aspect=DataAspect(),
         xlabel=L"k \ (\mu \text{m}^{-1})", ylabel=L"k\prime \ (\mu \text{m}^{-1})")
     hm = heatmap!(axd, ks[1], ks[1], g2_k[1] * 10^pow, colorrange=(-2, 2), colormap=:inferno)
@@ -70,9 +70,9 @@ with_theme(theme_latexfonts()) do
     vlines!(axd, param.k_down, color=:deepskyblue, linestyle=:dashdot)
 
     # Correlations small Windows zoomed
-    ge = g_bottom[1, 2] = GridLayout()
+    ge = g_bottom[1, 3] = GridLayout()
     axe = Axis(ge[1, 1]; aspect=DataAspect(),
-        xlabel=L"k \ (\mu \text{m}^{-1})", ylabel=L"k\prime \ (\mu \text{m}^{-1})", yaxisposition = :right)
+        xlabel=L"k \ (\mu \text{m}^{-1})", ylabel=L"k\prime \ (\mu \text{m}^{-1})")
     hm = heatmap!(axe, ks[1], ks[1], g2_k[1] * 10^pow, colorrange=(-2, 2), colormap=:inferno)
     xlims!(axe, param.k_down - 0.9, param.k_down + 0.9)
     ylims!(axe, param.k_up - 0.9, param.k_up + 0.9)
@@ -95,19 +95,25 @@ with_theme(theme_latexfonts()) do
     zoom_lines!(axd, axe)
 
     cb = Colorbar(fig[:, end+1], hm, label=L"g_2(k, k\prime) -1 \ \ ( \times 10^{-%$pow})")
-    cb.height = 840
-    cb.alignmode = Mixed(top=-40)
+    #cb.height = 840
+    #cb.alignmode = Mixed(bottom=25)
 
-    rowsize!(fig.layout, 1, Relative(0.5))
+    #rowsize!(g_windows, 1, Relative(0.5))
 
-    colsize!(g_top, 1, Relative(0.4))
+    #colsize!(g, 1, Relative(0.4))
 
-    for (label, layout) in zip(["(A)", "(B)", "(C)", "(D)", "(E)"], [ga, gb, gc, gd, ge])
+    for (label, layout) in zip(["(a)", "(b)", "(c)", "(d)", "(e)"], [ga, gb, gc, gd, ge])
         Label(layout[1, 1, TopLeft()], label,
             fontsize=20,
             padding=(0, 40, 0, 0),
             halign=:right)
     end
+
+    #rowgap!(g_windows, -10)
+    #colsize!(g_top, 1, Relative(0.4))
+    rowsize!(g, 1, Relative(0.25))
+    rowgap!(g, 10)
+
 
     save(joinpath(saving_dir, "fig2.pdf"), fig)
 
