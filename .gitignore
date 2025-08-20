@@ -1,3 +1,6 @@
+# Ignore data and plots folders
+data/
+plots/
 log.txt
 nohup.out
 Results/
