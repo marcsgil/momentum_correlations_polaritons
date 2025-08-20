@@ -5,7 +5,7 @@ include("equations.jl")
 include("plot_funcs.jl")
 
 # Space parameters
-L = 1024.0
+L = 512.0
 lengths = (L,)
 N = 512
 dx = L / N
@@ -13,21 +13,21 @@ xs = StepRangeLen(0, dx, N)
 
 # Polariton parameters
 ħ = 0.6582 #meV.ps
-γ = 0.047 / ħ
+γ = 0.5 * 0.047 / ħ
 m = 1 / 6 # meV.ps^2/μm^2; This is 3×10^-5 the electron mass
 g = 3e-4 / ħ
 δ₀ = 0.49 / ħ
 
 # Potential parameters
 V_damp = 4.5 / ħ
-w_damp = 20.0
+w_damp = 13.0
 x_def = L / 2
 V_def = 0.85 / ħ
 w_def = 0.75
 
 # Pump parameters
-k_up = (2π / 200) * 5
-k_down = (2π / 200) * 19
+k_up = (2π / 256) * 5
+k_down = (2π / 256) * 24
 
 divide = x_def - 7
 
@@ -37,16 +37,16 @@ divide = x_def - 7
 F_sonic_up = γ * √(δ_up / g) / 2
 F_sonic_down = γ * √(δ_down / g) / 2
 
-F_up = F_sonic_up 
-F_down = F_sonic_down
-F_max = 20
+F_up = F_sonic_up
+F_down = F_sonic_down * 1
+F_max = 8
 
 w_pump = 20
 
-decay_time = 50.0
-extra_intensity = 6.0
+decay_time = 120.0
+extra_intensity = 8.0
 
-dt = 2.0e-1
+dt = 1.0e-1
 nsaves = 512
 
 # Full parameter tuple
@@ -59,19 +59,19 @@ param = (;
 
 u0 = (zeros(complex(typeof(L)), N),)
 prob = GrossPitaevskiiProblem(u0, lengths; dispersion, potential, nonlinearity, pump, param)
-tspan = (0, 400.0)
+tspan = (0, 500.0)
 alg = StrangSplitting()
 ts, sol = solve(prob, alg, tspan; dt, nsaves);
 steady_state = map(x -> x[:, end], sol)
 heatmap(xs .- x_def, ts, Array(abs2.(sol[1])))
-plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-300, 300), ylims=(0, 3))
+plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-150, 150), ylims=(0, 3))
 #plot_bistability(xs .- x_def, steady_state[1], param, -200, 200, factor_ns_down=1.2)
 ##
-saving_dir = "/home/marcsgil/Code/LEON/MomentumCorrelations/full_sim/"
+saving_dir = "data/long_lifetime"
 
 plot_density(xs, steady_state[1], param; saving_dir)
-plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-200, 200), ylims=(0, 3), saving_dir)
-plot_bistability(xs .- x_def, steady_state[1], param, -200, 200; saving_dir, factor_ns_down=1.2)
+plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-100, 100), ylims=(0, 3), saving_dir)
+plot_bistability(xs .- x_def, steady_state[1], param, -100, 130; saving_dir, factor_ns_down=1.3)
 
 ks_up = LinRange(-0.7, 0.7, 512)
 ks_down = LinRange(-1.5, 1.5, 512)
