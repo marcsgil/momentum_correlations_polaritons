@@ -149,12 +149,12 @@ function update_correlations!(position_averages, momentum_averages, n_ave, stead
     position_averages, momentum_averages, n_ave
 end
 
-function update_correlations!(saving_dir, batchsize, nbatches, t_sim; array_type::Type{T}=Array, kwargs...) where {T}
+function update_correlations!(saving_dir, batchsize, nbatches; array_type::Type{T}=Array, kwargs...) where {T}
     @assert !isfile(joinpath(saving_dir, "previous_averages.jld2")) "Previous averages file already exists. Please remove it before running the simulation."
 
     steady_state, param, t_steady_state = read_steady_state(saving_dir, T)
     window_pairs = read_window_pairs(saving_dir, T)
-    init_averages(saving_dir, steady_state, t_sim)
+    init_averages(saving_dir, steady_state, t_steady_state)
 
     position_averages, momentum_averages, n_ave = read_averages(saving_dir, T)
 
