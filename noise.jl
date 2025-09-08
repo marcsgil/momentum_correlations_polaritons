@@ -3,14 +3,14 @@ include("io.jl")
 include("equations.jl")
 include("correlation_kernels.jl")
 
-saving_dir = "data/long_lifetime"
+saving_dir = "data/test"
 #saving_dir = "/home/marcsgil/Code/LEON/MomentumCorrelations/full_sim/"
-batchsize = 10^4
+batchsize = 10^3
 nbatches = 1
 t_sim = 50.0f0
 show_progress = isinteractive()
 max_datetime = typemax(DateTime)#DateTime(2025, 8, 20, 9, 0)
-array_type = CuArray
+array_type = Array
 
 
 update_correlations!(saving_dir, batchsize, nbatches, t_sim;
