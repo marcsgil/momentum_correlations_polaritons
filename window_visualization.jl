@@ -11,7 +11,7 @@ function windowed_ft!(dest, src, window_func, first_idx, plan)
     plan * dest
 end
 
-saving_dir = "data"
+saving_dir = "data/SupportDownstreamRepulsive1/"
 
 steady_state, param = jldopen(joinpath(saving_dir, "steady_state.jld2")) do file
     file["steady_state"], file["param"]
@@ -31,9 +31,9 @@ xs = StepRangeLen(0, param.dx, param.N) .- param.x_def
 with_theme(theme_latexfonts()) do
     fig = Figure(; size=(1600, 600), fontsize=24)
 
-    for (n, (width, text)) in enumerate(zip(50:50:250, ("(a)", "(b)", "(c)", "(d)", "(e)")))
-        center = 0
-        #width = 200
+    for (n, (center, text)) in enumerate(zip(-100:50:100, ("(a)", "(b)", "(c)", "(d)", "(e)")))
+        #center = 0
+        width = 200
         window = Window(center - width / 2, center + width / 2, xs, hann)
 
         dest = similar(complex(window.window))
@@ -47,7 +47,7 @@ with_theme(theme_latexfonts()) do
         energy_position = param.ħ * param.g * abs2.(steady_state[1])
 
 
-        ax = Axis(fig[1, n], xlabel=L"k \ (\mu \text{m}^{-1})", yscale=log10, ylabel=L"\hbar g|\Phi(k)|^2 \ (\text{meV})", yminorticks=IntervalsBetween(10), yminorticksvisible=true)
+        ax = Axis(fig[1, n], xlabel=L"k \ (\mu \text{m}^{-1})", yscale=log10, ylabel=L"\hbar g|\psi(k)|^2 \ (\text{meV})", yminorticks=IntervalsBetween(10), yminorticksvisible=true)
 
         lines!(ax, ks, energy_momentum, linewidth=3)
         xlims!(ax, -0.85, 0.85)
@@ -55,8 +55,8 @@ with_theme(theme_latexfonts()) do
         vlines!(ax, param.k_up, linewidth=2, linestyle=:dash, color=:black)
         vlines!(ax, param.k_down, linewidth=2, linestyle=:dash, color=:black)
 
-        ax2 = Axis(fig[2, n], xlabel=L"x - x_H \ (\mu \text{m})", ylabel=L"\hbar g|\Phi(x)|^2 \ (\text{meV})")
-        xlims!(ax2, -130, 130)
+        ax2 = Axis(fig[2, n], xlabel=L"x - x_H \ (\mu \text{m})", ylabel=L"\hbar g|\psi(x)|^2 \ (\text{meV})")
+        xlims!(ax2, -240, 240)
         lines!(ax2, xs, energy_position, linewidth=3)
         lines!(ax2, xs[window.first_idx:window.first_idx+length(window.window)-1], window.window * maximum(energy_position), linewidth=3, color=:red, linestyle=:dash, label="Window")
 
@@ -67,7 +67,7 @@ with_theme(theme_latexfonts()) do
 
         text!(ax, 0.05, 0.85; text, space=:relative, fontsize=24)
 
-        #save("plots/momentum_density_width.pdf", fig)
+        save("plots/momentum_density_center.pdf", fig)
         fig
     end
 

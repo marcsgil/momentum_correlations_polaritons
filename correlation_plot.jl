@@ -5,7 +5,7 @@ include("polariton_funcs.jl")
 include("equations.jl")
 include("plot_funcs.jl")
 
-saving_dir = "data/long_lifetime"
+saving_dir = "data/SupportDownstreamRepulsive1/"
 
 steady_state, param, t_steady_state = jldopen(joinpath(saving_dir, "steady_state.jld2")) do file
     file["steady_state"],
@@ -118,7 +118,7 @@ bracket2 = (k2_min, 0)
 
 corr_d2d2_star, corr_d2d2_star′ = correlate(param1, bracket1, param2, bracket2, 128, true)
 ##
-window_idx = 1
+window_idx = 2
 window1, window2, first_idx1, first_idx2 = jldopen(joinpath(saving_dir, "windows.jld2")) do file
     pair = file["window_pair_$window_idx"]
     pair.first.window,
@@ -173,7 +173,7 @@ with_theme(theme_latexfonts()) do
     lines!(ax, -corr_down_u1d2 .+ k_down, -corr_up_u1d2 .+ k_up, linewidth=4, color=(:magenta, 0.8), linestyle=(:dash, :loose), label=L"u_{\text{out}}^* \leftrightarrow d1_{\text{out}}^*") =#
     #Legend(fig[1, 3], ax)
 
-    #save(joinpath(saving_dir, "g2_momentum_$window_idx.pdf"), fig)
+    save(joinpath(saving_dir, "g2_momentum_$window_idx.pdf"), fig)
     fig
 end
 ##
