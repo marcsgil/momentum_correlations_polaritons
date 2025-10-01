@@ -5,7 +5,7 @@ include("polariton_funcs.jl")
 include("equations.jl")
 include("plot_funcs.jl")
 
-saving_dir = "/home/stagios/Marcos/LEON_Marcos/MomentumCorrelations/test"
+saving_dir = "/home/marcsgil/Data/momentum_correlation_polaritons/simple"
 
 steady_state, param = jldopen(joinpath(saving_dir, "steady_state.jld2")) do file
     file["steady_state"],
@@ -25,10 +25,10 @@ g2_r = calculate_g2m1(position_averages, commutators_r)
 N = param.N
 L = param.L
 dx = param.dx
-xs = StepRangeLen(0, dx, N) .- param.x_def
+xs = StepRangeLen(0, dx, N) .- param.L/2
 
 with_theme(theme_latexfonts()) do
-    pow = 5
+    pow = 3
     fig = Figure(; size=(600, 450), fontsize=24)
     ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"x \ (\mu \text{m})", ylabel=L"x\prime \ (\mu \text{m})")
     xlims!(ax, (-150, 150))

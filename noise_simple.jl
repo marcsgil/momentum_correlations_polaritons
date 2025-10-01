@@ -3,11 +3,13 @@ include("io.jl")
 include("equations_simple.jl")
 include("correlation_kernels.jl")
 
+CUDA.device!(0); # Select GPU device
+CUDA.device()
+
 #saving_dir = "data/test"
-saving_dir = "/home/stagios/Marcos/LEON_Marcos/MomentumCorrelations/test"
-batchsize = 10^4
-nbatches = 81
-t_sim = 50.0f0
+saving_dir = "/home/marcsgil/Data/momentum_correlation_polaritons/simple"
+batchsize = 10^3
+nbatches = 1
 show_progress = isinteractive()
 max_datetime = typemax(DateTime)#DateTime(2025, 8, 20, 9, 0)
 array_type = CuArray

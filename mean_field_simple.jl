@@ -73,5 +73,5 @@ with_theme(theme_latexfonts()) do
     fig
 end
 ##
-saving_dir = "/home/stagios/Marcos/LEON_Marcos/MomentumCorrelations/test"
+saving_dir = "/home/marcsgil/Data/momentum_correlation_polaritons/simple"
 save_steady_state(saving_dir, steady_state, param, tspan)
