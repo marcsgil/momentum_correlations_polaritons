@@ -5,12 +5,11 @@ include("polariton_funcs.jl")
 include("equations.jl")
 include("plot_funcs.jl")
 
-saving_dir = "data/test/"
+saving_dir = "/home/stagios/Marcos/LEON_Marcos/MomentumCorrelations/test"
 
-steady_state, param, t_steady_state = jldopen(joinpath(saving_dir, "steady_state.jld2")) do file
+steady_state, param = jldopen(joinpath(saving_dir, "steady_state.jld2")) do file
     file["steady_state"],
-    file["param"],
-    file["t_steady_state"]
+    file["param"]
 end
 
 position_averages = jldopen(joinpath(saving_dir, "averages.jld2")) do file

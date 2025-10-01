@@ -59,15 +59,16 @@ param = (;
 
 u0 = (zeros(complex(typeof(L)), N),)
 prob = GrossPitaevskiiProblem(u0, lengths; dispersion, potential, nonlinearity, pump, param)
-tspan = (0, 500.0)
+tspan = (0, 400.0)
 alg = StrangSplitting()
 ts, sol = solve(prob, alg, tspan; dt, nsaves);
 steady_state = map(x -> x[:, end], sol)
 heatmap(xs .- x_def, ts, Array(abs2.(sol[1])))
+
 plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-150, 150), ylims=(0, 3))
 #plot_bistability(xs .- x_def, steady_state[1], param, -200, 200, factor_ns_down=1.2)
 ##
-saving_dir = "data/test"
+saving_dir = "/home/stagios/Marcos/LEON_Marcos/MomentumCorrelations/test"
 
 plot_density(xs, steady_state[1], param; saving_dir)
 plot_velocities(xs .- x_def, steady_state[1], param; xlims=(-100, 100), ylims=(0, 3), saving_dir)
