@@ -8,7 +8,7 @@ CUDA.device()
 
 #saving_dir = "data/test"
 saving_dir = "/home/marcsgil/Data/momentum_correlation_polaritons/simple"
-batchsize = 10^3
+batchsize = 10^4
 nbatches = 1
 show_progress = isinteractive()
 max_datetime = typemax(DateTime)#DateTime(2025, 8, 20, 9, 0)

@@ -21,6 +21,8 @@ g = 3e-4 / ħ
 # Potential parameters
 V_damp = 50.0
 w_damp = 20.0
+V_pot = 1.3
+w_pot = 0.75
 
 # Pump parameters
 w_pump = w_damp * 2
@@ -36,7 +38,7 @@ F_sonic_up = γ * √(δ_up / g) / 2
 F_sonic_down = γ * √(δ_down / g) / 2
 
 F_up = F_sonic_up * (1 + 0.19)
-F_down = F_sonic_down * (1)
+F_down = F_sonic_down * (1 + 0.6)
 
 decay_time = 50.0
 extra_time_amplitude = 5.0
@@ -48,7 +50,7 @@ nsaves = 256
 param = (;
     L, N, dx, dt,
     m, g, ħ, γ, δ₀,
-    V_damp, w_damp, w_pump, extra_space_amplitude,
+    V_damp, w_damp, w_pump, V_pot, w_pot, extra_space_amplitude,
     k_up, k_down, F_up, F_down, decay_time, extra_time_amplitude
 )
 
@@ -59,7 +61,7 @@ alg = StrangSplitting()
 ts, sol = solve(prob, alg, tspan; dt, nsaves);
 steady_state = map(x -> x[:, end], sol)
 heatmap(xs .- L / 2, ts, Array(abs2.(sol[1])))
-plot_velocities(xs .- param.L/2, steady_state[1], param; xlims=(-130, 130), ylims=(0, 2.5))
+plot_velocities(xs .- param.L / 2, steady_state[1], param; xlims=(-130, 130), ylims=(0, 2.5))
 ##
 n0 = abs2.(sol[1][7N÷8, end])
 ns = LinRange(0, 1.3 * n0, 256)

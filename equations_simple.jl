@@ -10,7 +10,7 @@ function loss(xs, param)
 end
 
 function potential(xs, param)
-    -im * loss(xs, param)
+    param.V_pot * gaussian(xs[1], param.L / 2, param.w_pot) - im * loss(xs, param)
 end
 
 time_dependence(t, param) = (param.extra_time_amplitude * exp(-t / param.decay_time) + 1)

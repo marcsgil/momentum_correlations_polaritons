@@ -28,14 +28,13 @@ dx = param.dx
 xs = StepRangeLen(0, dx, N) .- param.L/2
 
 with_theme(theme_latexfonts()) do
-    pow = 3
+    pow = 5
     fig = Figure(; size=(600, 450), fontsize=24)
     ax = Axis(fig[1, 1], aspect=DataAspect(), xlabel=L"x \ (\mu \text{m})", ylabel=L"x\prime \ (\mu \text{m})")
     xlims!(ax, (-150, 150))
     ylims!(ax, (-150, 150))
     hm = heatmap!(ax, xs, xs, g2_r * 10^pow, colorrange=(-6, 6), colormap=:inferno)
     Colorbar(fig[1, 2], hm, label=L"g_2(x, x\prime) -1 \ \ ( \times 10^{-%$pow})")
-    save(joinpath(saving_dir, "g2_position.pdf"), fig)
     fig
 end
 ##
